@@ -4,7 +4,7 @@ simple distributed file system which assumes ideal (no-failures/exceptions) envi
 SDFS is simple, easy to install (copy a jar) and has less features. If you have few nodes where you want to distribute your file chunks and process them, this is a FS you are looking for.
 
 ### Install
-- download the project / binary (sdfs.jar)
+- download the project / binary (sdfs.jar from releases page)
 - copy it to node where you want it to run
 
 ### Architecture
