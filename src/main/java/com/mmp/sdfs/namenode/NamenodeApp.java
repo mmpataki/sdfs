@@ -10,12 +10,12 @@ public class NamenodeApp extends RpcServer {
     NameNodeService namenode;
 
     public static void main(String[] args) throws Exception {
-        log.info("Starting namenode...");
         NameNodeConfig conf = new NameNodeConfig(args);
         if (conf.isHelp()) {
             System.out.println(conf.getHelpString());
             return;
         }
+        log.info("Starting namenode...");
         log.info("Config: \n{}", conf);
         new NamenodeApp(conf).start();
         log.info("Namenode started.");

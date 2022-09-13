@@ -7,5 +7,5 @@ import java.util.List;
 
 @Data
 public class DnHeartbeatResponse implements Serializable {
-    public List<String> deletedBlocks;
+
 }
