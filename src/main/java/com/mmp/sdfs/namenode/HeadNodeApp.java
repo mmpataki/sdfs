@@ -1,29 +1,30 @@
 package com.mmp.sdfs.namenode;
 
-import com.mmp.sdfs.conf.NameNodeConfig;
+import com.mmp.sdfs.conf.HeadNodeConfig;
 import lombok.extern.slf4j.Slf4j;
 import com.mmp.sdfs.rpc.RpcServer;
 
 @Slf4j
-public class NamenodeApp extends RpcServer {
+public class HeadNodeApp extends RpcServer {
 
-    NameNodeService namenode;
+    HeadNodeService namenode;
 
     public static void main(String[] args) throws Exception {
-        NameNodeConfig conf = new NameNodeConfig(args);
+        HeadNodeConfig conf = new HeadNodeConfig(args);
         if (conf.isHelp()) {
             System.out.println(conf.getHelpString());
             return;
         }
         log.info("Starting namenode...");
         log.info("Config: \n{}", conf);
-        new NamenodeApp(conf).start();
+        new HeadNodeApp(conf).start();
         log.info("Namenode started.");
     }
 
-    public NamenodeApp(NameNodeConfig conf) throws Exception {
+    public HeadNodeApp(HeadNodeConfig conf) throws Exception {
         super(conf.getNnPort(), conf.getRpcSerde());
-        namenode = new NameNodeService(conf);
+        namenode = new HeadNodeService(conf);
         registerRpcProvider(namenode);
+        namenode.start();
     }
 }

@@ -5,12 +5,12 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class DataNodeConfig extends SdfsConfig {
+public class WorkerNodeConfig extends SdfsConfig {
 
-    @Argument(keys = {"--dnport"}, help = "Datanode port", defValue = "5002")
+    @Argument(keys = {"--dnport"}, help = "Datanode port", defValue = "5003")
     int port;
 
-    @Argument(keys = {"--dndport"}, help = "Datanode data transfer port", defValue = "5003")
+    @Argument(keys = {"--dndport"}, help = "Datanode data transfer port", defValue = "5004")
     int dataPort;
 
     @Argument(keys = {"--dndir"}, help = "Datanode dir", defValue = "./datanode")
@@ -20,7 +20,7 @@ public class DataNodeConfig extends SdfsConfig {
         return String.format("%s/blocks", getDnDir());
     }
 
-    public DataNodeConfig(String args[]) throws Exception {
+    public WorkerNodeConfig(String args[]) throws Exception {
         super(args);
     }
 }

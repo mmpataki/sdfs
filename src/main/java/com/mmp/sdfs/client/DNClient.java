@@ -5,6 +5,7 @@ import com.mmp.sdfs.cdnrpc.WriteOp;
 import com.mmp.sdfs.common.DnAddress;
 import com.mmp.sdfs.common.LocatedBlock;
 import com.mmp.sdfs.common.ProxyFactory;
+import com.mmp.sdfs.common.TaskDef;
 import com.mmp.sdfs.conf.SdfsConfig;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -87,5 +88,9 @@ public class DNClient {
                 return location;
         }
         return locations.get(0);
+    }
+
+    public void startTask(DnAddress addr, TaskDef task) throws Exception {
+        proxyFactory.getDNProxy(addr).startTask(task);
     }
 }

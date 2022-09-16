@@ -3,35 +3,38 @@ package com.mmp.sdfs.datanode;
 import com.mmp.sdfs.cdnrpc.DataNodeOp;
 import com.mmp.sdfs.cdnrpc.ReadOp;
 import com.mmp.sdfs.cdnrpc.WriteOp;
-import com.mmp.sdfs.conf.DataNodeConfig;
-import lombok.extern.slf4j.Slf4j;
+import com.mmp.sdfs.common.TaskDef;
+import com.mmp.sdfs.conf.SdfsClientConfig;
+import com.mmp.sdfs.conf.WorkerNodeConfig;
 import com.mmp.sdfs.server.Server;
 import com.mmp.sdfs.utils.IOUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
-public class DataNodeService extends Server implements DataNode {
+public class WorkerNodeService extends Server implements WorkerNode {
 
     String myId;
-    private final DataNodeConfig conf;
+    private final WorkerNodeConfig conf;
+    private final SdfsClientConfig clientConfig;
+    private final Map<String, Integer> taskStates = new HashMap<>();
 
-    public DataNodeService(DataNodeConfig conf) throws Exception {
+    public WorkerNodeService(WorkerNodeConfig conf, SdfsClientConfig clientConfig) throws Exception {
         super(conf.getDataPort());
         this.conf = conf;
+        this.clientConfig = clientConfig;
         if (!new File(conf.getDnDir()).exists()) {
             formatDn();
         } else {
             myId = getMyId();
         }
-        new HeartBeater(conf, getMyId()).start();
+        new HeartBeater(conf, getMyId(), taskStates).start();
     }
 
     private void formatDn() throws Exception {
@@ -74,6 +77,19 @@ public class DataNodeService extends Server implements DataNode {
             }
         }
         return passed;
+    }
+
+    @Override
+    public void startTask(TaskDef task) throws Exception {
+        String taskId = task.getId();
+        try {
+            taskStates.put(taskId, -9999);
+            new TaskExecutor(task, clientConfig, status -> taskStates.put(taskId, status)).start();
+        } catch (Throwable e) {
+            log.error("Error while starting task: {}", taskId, e);
+            taskStates.put(taskId, -1);
+            throw e;
+        }
     }
 
     public String getIdFile() {

@@ -5,7 +5,10 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class NameNodeConfig extends SdfsConfig {
+public class HeadNodeConfig extends SdfsConfig {
+
+    @Argument(keys = {"-ip", "--infoport"}, required = true, help = "info port", defValue = "5002")
+    int infoPort;
 
     @Argument(keys = {"-d", "--namedir"}, required = true, help = "namenode directory", defValue = "namenode")
     String namedir;
@@ -13,7 +16,7 @@ public class NameNodeConfig extends SdfsConfig {
     @Argument(keys = {"--storeclass"}, required = true, help = "namenode store class", defValue = "com.mmp.sdfs.namenode.SqliteNameStore")
     String storeClass;
 
-    public NameNodeConfig(String[] args) throws Exception {
+    public HeadNodeConfig(String[] args) throws Exception {
         super(args);
     }
 }

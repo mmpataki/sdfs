@@ -1,7 +1,7 @@
 package com.mmp.sdfs.namenode;
 
 import com.mmp.sdfs.client.DNClient;
-import com.mmp.sdfs.conf.NameNodeConfig;
+import com.mmp.sdfs.conf.HeadNodeConfig;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.mmp.sdfs.utils.Pair;
@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @AllArgsConstructor
 public class BlockDeleter {
-    private final NameNodeConfig conf;
+    private final HeadNodeConfig conf;
     private final NameStore store;
     private final Map<String, DnRef> dns;
 

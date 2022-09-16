@@ -3,7 +3,7 @@ package com.mmp.sdfs.namenode;
 import com.mmp.sdfs.common.DnAddress;
 import com.mmp.sdfs.common.FileStat;
 import com.mmp.sdfs.common.LocatedBlock;
-import com.mmp.sdfs.conf.NameNodeConfig;
+import com.mmp.sdfs.conf.HeadNodeConfig;
 import lombok.extern.slf4j.Slf4j;
 import com.mmp.sdfs.utils.Pair;
 
@@ -16,7 +16,7 @@ public class SqliteNameStore extends NameStore {
 
     private final Connection conn;
 
-    public SqliteNameStore(NameNodeConfig conf, Map<String, DnRef> dataNodes) throws Exception {
+    public SqliteNameStore(HeadNodeConfig conf, Map<String, DnRef> dataNodes) throws Exception {
         super(conf, dataNodes);
         conn = DriverManager.getConnection(String.format("jdbc:sqlite:%s/store.db", conf.getNamedir()), "", "");
         conn.setAutoCommit(true);
@@ -148,5 +148,18 @@ public class SqliteNameStore extends NameStore {
             dps.addBatch();
         }
         dps.execute();
+    }
+
+    @Override
+    public void close(String path, long size) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement("update files set size = ? where path = ?");
+        ps.setLong(1, size);
+        ps.setString(2, path);
+        ps.execute();
+    }
+
+    @Override
+    public FileStat get(String path) throws Exception {
+        return getPathId(path);
     }
 }

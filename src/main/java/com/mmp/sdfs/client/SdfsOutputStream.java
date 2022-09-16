@@ -51,8 +51,10 @@ public class SdfsOutputStream extends OutputStream {
         dnc.writeBlock(currentBlock, buffer, offset);
     }
 
+    @SneakyThrows
     @Override
     public void close() throws IOException {
         flush();
+        proxyFactory.getNNProxy().closeFile(path, offset);
     }
 }

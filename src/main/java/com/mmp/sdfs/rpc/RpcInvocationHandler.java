@@ -15,13 +15,14 @@ public class RpcInvocationHandler implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        Socket sock = new Socket(host, port);
-        serde.writeTo(sock.getOutputStream(), new RpcCall(clazz.getCanonicalName() + ":" + method.getName(), args));
-        RpcResponse rpcResponse = (RpcResponse) serde.readFrom(sock.getInputStream());
-        if(rpcResponse.e != null) {
-            throw new RuntimeException(rpcResponse.e);
-        } else {
-            return rpcResponse.ret;
+        try (Socket sock = new Socket(host, port)) {
+            serde.writeTo(sock.getOutputStream(), new RpcCall(clazz.getCanonicalName() + ":" + method.getName(), args));
+            RpcResponse rpcResponse = (RpcResponse) serde.readFrom(sock.getInputStream());
+            if (rpcResponse.e != null) {
+                throw rpcResponse.e.getCause();
+            } else {
+                return rpcResponse.ret;
+            }
         }
     }
 }

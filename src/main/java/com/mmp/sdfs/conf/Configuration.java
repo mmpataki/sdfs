@@ -28,8 +28,9 @@ public class Configuration {
 
     BufferedReader sc = new BufferedReader(new InputStreamReader(System.in));
 
-    // internal for debugging
+    // internal
     boolean __debug = false;
+    Map<String, String> curValues = new HashMap<>();
 
     @Override
     public String toString() {
@@ -57,18 +58,25 @@ public class Configuration {
         } else {
             val = s.isEmpty() ? null : s;
         }
+        set(f, c, val);
+    }
+
+    public void set(Field f, Object o, Object v) throws IllegalAccessException {
         boolean accessible = f.isAccessible();
         f.setAccessible(true);
-        f.set(c, val);
+        f.set(o, v);
         f.setAccessible(accessible);
     }
 
     public void classInstatiator(Field f, Configuration c, String s) throws Exception {
-        f.set(c, Class.forName(s).newInstance());
+        set(f, c, Class.forName(s).newInstance());
     }
 
     private void set(Field f, String val) throws Exception {
-        getClass().getMethod(f.getAnnotation(Argument.class).parser(), Field.class, Configuration.class, String.class)
+        Argument argConf = f.getAnnotation(Argument.class);
+        String key = argConf.keys()[0];
+        curValues.put(key, val);
+        getClass().getMethod(argConf.parser(), Field.class, Configuration.class, String.class)
                 .invoke(this, f, this, val);
     }
 
@@ -91,8 +99,12 @@ public class Configuration {
         List<Field> allFields = getFields();
         allFields.forEach(f -> {
             Argument arg = f.getAnnotation(Argument.class);
-            for (String key : arg.keys())
+            for (String key : arg.keys()) {
+                if (fields.containsKey(key)) {
+                    throw new RuntimeException(key + " is already mapped to " + fields.get(key));
+                }
                 fields.put(key, f);
+            }
         });
 
         // set default values
@@ -108,7 +120,8 @@ public class Configuration {
             String arg = args[i];
             if (!fields.containsKey(arg)) {
                 log.warn("unknown argument: " + arg);
-                System.exit(0);
+                ++i;
+                continue;
             }
             Field field = fields.get(arg);
             set(field, field.getType().isAssignableFrom(boolean.class) ? "true" : args[++i]);
@@ -118,7 +131,9 @@ public class Configuration {
             Properties props = new Properties();
             props.load(new FileReader(propsFile));
             for (Map.Entry<Object, Object> entry : props.entrySet()) {
-                set(getClass().getDeclaredField(entry.getKey().toString()), entry.getValue().toString());
+                String key = "--" + entry.getKey().toString();
+                if (fields.containsKey(key))
+                    set(fields.get(key), entry.getValue().toString());
             }
         }
 
@@ -145,6 +160,10 @@ public class Configuration {
         }
     }
 
+    public Configuration() throws Exception {
+        this(new String[]{"--props", "./config.properties"});
+    }
+
     public String getHelpString() {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("   %-35s %4s %8s %s\n", "switch", "reqd", "multiple", "help"));
@@ -160,5 +179,9 @@ public class Configuration {
             ));
         });
         return sb.toString();
+    }
+
+    public Map<String, String> getAsMap() {
+        return curValues;
     }
 }

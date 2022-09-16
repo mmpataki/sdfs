@@ -1,9 +1,9 @@
 package com.mmp.sdfs.common;
 
 import com.mmp.sdfs.conf.SdfsConfig;
-import com.mmp.sdfs.datanode.DataNode;
+import com.mmp.sdfs.datanode.WorkerNode;
 import lombok.extern.slf4j.Slf4j;
-import com.mmp.sdfs.nndnrpc.NameNode;
+import com.mmp.sdfs.nndnrpc.HeadNode;
 import com.mmp.sdfs.rpc.RpcInvocationHandler;
 import com.mmp.sdfs.rpc.RpcSerde;
 
@@ -22,12 +22,12 @@ public class ProxyFactory {
         return (T) Proxy.newProxyInstance(clz.getClassLoader(), new Class[]{clz}, new RpcInvocationHandler(clz, host, port, serde));
     }
 
-    public NameNode getNNProxy() {
-        return makeProxy(NameNode.class, conf.getNnHost(), conf.getNnPort(), conf.getRpcSerde());
+    public HeadNode getNNProxy() {
+        return makeProxy(HeadNode.class, conf.getNnHost(), conf.getNnPort(), conf.getRpcSerde());
     }
 
-    public DataNode getDNProxy(DnAddress addr) {
-        return makeProxy(DataNode.class, addr.getHostname(), addr.getPort(), conf.getRpcSerde());
+    public WorkerNode getDNProxy(DnAddress addr) {
+        return makeProxy(WorkerNode.class, addr.getHostname(), addr.getPort(), conf.getRpcSerde());
     }
 
 }
