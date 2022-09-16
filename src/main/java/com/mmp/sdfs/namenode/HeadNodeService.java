@@ -9,7 +9,6 @@ import com.mmp.sdfs.nndnrpc.DnHeartbeatResponse;
 import com.mmp.sdfs.nndnrpc.HeadNode;
 import com.mmp.sdfs.rpc.RpcContext;
 import com.mmp.sdfs.server.Server;
-import com.mmp.sdfs.utils.IOUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
@@ -134,7 +133,7 @@ public class HeadNodeService extends Server implements HeadNode {
     Object getTaskState(Map<String, String> params) {
         if (params.containsKey("id"))
             return taskState.get(params.get("id"));
-        if(params.containsKey("nodeid")){
+        if (params.containsKey("nodeid")) {
             String node = params.get("nodeid");
             Map<String, TaskState> tasks = new HashMap<>();
             taskState.values().stream().filter(t -> t.getNode().equals(node)).forEach(t -> tasks.put(t.getId(), t));
@@ -174,15 +173,33 @@ public class HeadNodeService extends Server implements HeadNode {
                 }
             }
         } else {
-            File f = new File((__debug ? "C:\\Users\\mpataki\\Desktop\\sdfs\\src\\main\\resources\\public" : "public") + (resource.equals("/") ? "/index.html" : resource));
-            sendHeader(sock.getOutputStream(), f.exists() ? 200 : 404);
-            try (FileInputStream fis = new FileInputStream(f)) {
-                IOUtils.copy(fis, sock.getOutputStream(), (int) f.length());
+            InputStream is = null;
+            resource = resource.equals("/") ? "/index.html" : resource;
+            try {
+                if (__debug) {
+                    is = new FileInputStream("C:\\Users\\mpataki\\Desktop\\sdfs\\src\\main\\resources\\public" + resource);
+                } else {
+                    is = getClass().getResourceAsStream("/public" + resource);
+                }
+                sendHeader(sock.getOutputStream(), 200);
+                copyData(is, sock.getOutputStream());
+                is.close();
+            } catch (Exception e) {
+                log.error("error while processing req: {}", resource, e);
+                sendHeader(sock.getOutputStream(), 404);
             }
         }
         sock.getOutputStream().write("\n\n".getBytes());
         sock.getOutputStream().flush();
         sock.close();
+    }
+
+    private static void copyData(InputStream in, OutputStream out) throws Exception {
+        byte[] buffer = new byte[8 * 1024];
+        int len;
+        while ((len = in.read(buffer)) > 0) {
+            out.write(buffer, 0, len);
+        }
     }
 
     private void sendHeader(OutputStream os, int code) throws IOException {
