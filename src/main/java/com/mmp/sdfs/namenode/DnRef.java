@@ -14,7 +14,7 @@ public class DnRef {
     SysInfo sysInfo;
 
     public DnRef(DnHeartbeat rpl, String hostname) {
-        this.addr = new DnAddress(rpl.getId(), hostname, rpl.getPort(), rpl.getDataPort());
+        this.addr = new DnAddress(rpl.getId(), hostname, rpl.getPort(), rpl.getDataPort(), rpl.getInfoPort());
         this.blocks = rpl.getBlocks();
         this.sysInfo = rpl.getSysInfo();
     }

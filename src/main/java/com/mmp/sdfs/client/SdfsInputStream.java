@@ -22,7 +22,7 @@ public class SdfsInputStream extends InputStream {
     LocatedBlock currentBlock;
 
     byte[] buffer;
-    int len, offset, curBlock = -1;
+    int len, offset, curBlock = 0;
 
     public SdfsInputStream(String path, SdfsClient client) {
         this.path = path;
@@ -47,8 +47,9 @@ public class SdfsInputStream extends InputStream {
             offset = 0;
         }
         int ret = buffer[offset++];
-        if (offset == len)
+        if (offset == len) {
             currentBlock = null;
+        }
         if (ret == -1)
             ret = 0xff;
         return ret;

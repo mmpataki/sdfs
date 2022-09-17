@@ -71,47 +71,158 @@
                 <div style="margin: 20px 0px">
                     <small><strong>Disks</strong></small>
                     ${disk}
-                </div>
+                    </div>
             `
         }
         function memUsage(n) {
             let x = n => (n / (1024 * 1024 * 1024)).toFixed(2), t = n.sysInfo.memorySize, f = n.sysInfo.memoryAvailable;
             return `
-                <div style="margin: 20px 0px">
-                    ${getStatusBar('Mem', f, t, 'skyblue', `used (${x(f)}GB)`, `total (${x(t)} GB)`, 'font-weight: bold')}
+            <div style="margin: 20px 0px">
+                ${getStatusBar('Mem', f, t, 'skyblue', `used (${x(f)}GB)`, `total (${x(t)} GB)`, 'font-weight: bold')}
+                </div>
+                `
+        }
+
+        function getCpuUsage(n) {
+            let x = n => (n / (1024 * 1024 * 1024)).toFixed(2), t = 100, s = n.sysInfo, f = s.cpuPercent;
+            return `
+                <div>
+                    ${getStatusBar('CPU', f, t, 'skyblue', `used (${x(f)}%s)`, ``, 'font-weight: bold')}
                 </div>
             `
         }
 
-        function getTaskStats(n) {
+        function getTask(t) {
             return `
-                <div style='margin: 20px 0px'>
-                    <h4>Tasks: ${n.taskStat ? n.taskStat.cnt : 0}</h4>
+                <tr style="margin: 5px">
+                    <th style="padding-left: 20px">
+                        ${t.taskLabel}
+                        <small><a style="margin-left: 10px" target="_blank" href="http://${t.nodeDef.addr.hostname}:${t.nodeDef.addr.infoPort}/api/task/logs?taskid=${t.taskId}">logs</a></small>
+                    </th>
+                    <td></td>
+                    <td>${getStateLbl(t.state)}</td>
+                    <td>
+                        ${new Date(t.stateChanges[0].second).toISOString()}
+                    </td>
+                    <td>
+                        ${new Date(t.stateChanges[t.stateChanges.length - 1].second).toISOString()}
+                    </td>
+                    <td style="min-width: 100px">
+                        ${getStateChange(t.stateChanges)}
+                    </td>
+                </tr>
+            `
+        }
+
+        function getGantt(arr, colmap) {
+            let out = [], tot = arr[arr.length - 1].start - arr[0].start
+            for (let i = 0; i < arr.length - 1; i++) {
+                let tim = (arr[i + 1].start - arr[i].start)
+                out.push({ tag: arr[i].lbl, lbl: `${arr[i].lbl} (${(tim / 1000).toFixed(2)}s)`, percent: (tim * 100) / tot })
+            }
+            console.log(out)
+            return `
+                <div class="status-bar-box" style="display: flex">
+                    ${out.map(o => {
+                return `
+                            <div style="width: ${o.percent}%; background: ${colmap[o.tag]};" class="status-bar-filled" title="${o.lbl}"></div>
+                        `
+            }).join('\n')}
+                </div>
+            `
+        }
+
+        function getStateChange(states) {
+            states = states.map(s => ({ lbl: s.first, start: s.second - states[0].second }))
+            if (states[states.length - 1].lbl.endsWith("ING")) {
+                states.push({ lbl: 'DUMMY', start: +(new Date()) })
+            }
+            return getGantt(states, {
+                ACCEPTED: 'skyblue',
+                QUEUED: 'blue',
+                RUNNING: 'orange',
+                FAILED: 'red',
+                SUCCEEDED: 'green'
+            })
+        }
+
+        function getStateLbl(state) {
+            let cols  ={
+                succeeded: ['#E8F5E9', '#1B5E20'],
+                failed: ['#FFEBEE', '#B71C1C'],
+                running: ['#FFF3E0', '#E65100'],
+                aborted: ['#FCE4EC', '#880E4F'],
+                queued: ['#E3F2FD', '#0D47A1']
+            }
+            state = state.toLowerCase()
+            console.log(state)
+            return `
+                <span style="background: ${cols[state][0]}; color: ${cols[state][1]}; padding: 1px 3px; border-radius: 3px">
+                    ${state}
+                </span>
+            `
+        }
+
+        function getJob(i, job) {
+            return `
+                <tr>
+                    <th>
+                        ${i}
+                    </th>
+                    <td>${job.jobLabel}</td>
+                    <td>${getStateLbl(job.state)}</td>
+                    <td>
+                        ${new Date(job.stateChanges[0].second).toISOString()}
+                    </td>
+                    <td>
+                        ${new Date(job.stateChanges[job.stateChanges.length - 1].second).toISOString()}
+                    </td>
+                    <td style="min-width: 100px">
+                        ${getStateChange(job.stateChanges)}
+                    </td>
+                </tr>
+                <tr><td style="padding-left: 10px">Tasks</td></tr>
+                ${Object.values(job.taskStates).map(t => getTask(t)).join('\n')}
+                <tr><td style="padding: 10px"></td></tr>
+            `
+        }
+
+
+        function getJobs(jobs) {
+            return `
+                <div style='margin: 40px 0px 0px 0px'>
+                    <h3>Jobs: ${Object.keys(jobs).length}</h3>
+                    <table style="width: 100%; text-align: left">
+                        <tr>
+                            <th>Job Id</th>
+                            <th>Label</th>
+                            <th>State</th>
+                            <th>Accepted</th>
+                            <th>Last update</th>
+                            <th>Timeline</th>
+                        </tr>
+                        ${Object.entries(jobs).map(([i, job]) => getJob(i, job)).join('\n')}
+                    </table>
                 </div>
             `
         }
         function load(m) {
-            Promise.all([get(`/api/nodes?id=${m.id}`).then(resp => resp.json), get(`/api/tasks?nodeid=${m.id}`).then(resp => resp.json)])
-                .then(([node, tasks]) => {
+            Promise.all([get(`/api/nodes?id=${m.id}`).then(resp => resp.json), get(`/api/jobs?nodeid=${m.id}`).then(resp => resp.json)])
+                .then(([node, jobs]) => {
                     let nodes = {}
                     nodes[node.addr.id] = node
 
-                    Object.values(tasks).forEach(task => {
-                        if (!nodes[task.node]['taskStat']) {
-                            nodes[task.node]['taskStat'] = { cnt: 0, states: {} }
-                        }
-                        nodes[task.node].taskStat.cnt++;
-                        nodes[task.node].taskStat.states[task.state]++;
+                    Object.values(jobs).forEach(j => {
+                        Object.values(j.taskStates).forEach(t => t.nodeDef = node)
                     })
-
-                    console.log(nodes)
 
                     g('output').innerHTML = Object.values(nodes).map(node => {
                         return `
                             ${getHostName(node)}
                             ${diskUsage(node)}
                             ${memUsage(node)}
-                            ${getTaskStats(node)}
+                            ${getCpuUsage(node)}
+                            ${getJobs(jobs)}
                     `
                     }).join('\n')
                 })
@@ -126,7 +237,7 @@
 </head>
 
 <body>
-    <div style="width: 60%; margin: auto">
+    <div style="width: 80%; margin: auto">
         <div id="output"></div>
     </div>
 </body>

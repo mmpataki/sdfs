@@ -41,6 +41,7 @@ public class HeartBeater {
 
         dpl.setId(myId);
         dpl.setPort(conf.getPort());
+        dpl.setInfoPort(conf.getInfoPort());
         dpl.setDataPort(conf.getDataPort());
         dpl.setTaskStates(taskStates);
 

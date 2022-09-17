@@ -7,7 +7,7 @@ import com.mmp.sdfs.rpc.RpcServer;
 @Slf4j
 public class HeadNodeApp extends RpcServer {
 
-    HeadNodeService namenode;
+    HeadNodeService headNode;
 
     public static void main(String[] args) throws Exception {
         HeadNodeConfig conf = new HeadNodeConfig(args);
@@ -15,16 +15,15 @@ public class HeadNodeApp extends RpcServer {
             System.out.println(conf.getHelpString());
             return;
         }
-        log.info("Starting namenode...");
+        log.info("Starting headnode...");
         log.info("Config: \n{}", conf);
         new HeadNodeApp(conf).start();
-        log.info("Namenode started.");
+        log.info("Headnode started.");
     }
 
     public HeadNodeApp(HeadNodeConfig conf) throws Exception {
         super(conf.getNnPort(), conf.getRpcSerde());
-        namenode = new HeadNodeService(conf);
-        registerRpcProvider(namenode);
-        namenode.start();
+        headNode = new HeadNodeService(conf);
+        registerRpcProvider(headNode);
     }
 }

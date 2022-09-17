@@ -8,10 +8,7 @@ import com.mmp.sdfs.utils.IOUtils;
 import com.mmp.sdfs.utils.Pair;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -26,32 +23,44 @@ public class TaskExecutor {
     private final SdfsClientConfig cliConf;
     private final SdfsClient sdfsClient;
     String workDir;
+    List<String> downloadedFiles = new ArrayList<>();
 
     public TaskExecutor(TaskDef task, SdfsClientConfig clientConf, Consumer<Integer> statusCallBack) {
         this.task = task;
         this.cliConf = clientConf;
         this.sdfsClient = new SdfsClient(clientConf);
         this.statusCallback = statusCallBack;
-        this.workDir = String.format("./tasks/%s", task.getId());
+        this.workDir = workDir(task.getTaskId());
+    }
+
+    public static String workDir(String taskId) {
+        return String.format("./tasks/%s", taskId);
+    }
+
+    public static String logPath(String taskid) {
+        return String.format("%s/logs.txt", workDir(taskid));
     }
 
     private void executeTask() throws IOException {
-        String taskId = task.getId();
+        String taskId = task.getTaskId();
         String scriptFile = String.format("%s/script.sh", workDir);
 
         StringBuilder sb = new StringBuilder();
         sb.append("export TASK_ID=").append(taskId);
-        task.getEnv().forEach((k, v) -> sb.append("export ").append(k).append('\n').append(v).append('\n'));
+        if (task.getEnv() != null)
+            task.getEnv().forEach((k, v) -> sb.append("export ").append(k).append('\n').append(v).append('\n'));
         sb.append('\n');
         sb.append("cd ").append(workDir).append('\n');
         task.getCommand().forEach(c -> sb.append(c).append(" "));
-        sb.append("> stdout 2> stderr").append('\n');
+        sb.append("> logs.txt 2>&1").append('\n');
 
-        Files.createDirectories(Paths.get(workDir));
         Files.write(Paths.get(scriptFile), sb.toString().getBytes());
 
         ProcessBuilder pb = new ProcessBuilder();
-        pb.command("bash", scriptFile);
+        pb.command(task.getCommand());
+        pb.directory(new File(workDir));
+        pb.redirectOutput(new File(String.format("%s/logs.txt", workDir)));
+        pb.redirectErrorStream(true);
         new Thread(() -> {
             try {
                 Process proc = pb.start();
@@ -60,22 +69,31 @@ public class TaskExecutor {
             } catch (Throwable e) {
                 log.error("Task {} failed", taskId, e);
                 statusCallback.accept(-1);
+            } finally {
+                cleanUpDownloadedFiles();
             }
         }, taskId + "-process-monitor").start();
     }
 
     public void start() throws IOException {
-        List<String> downloadedFiles = new ArrayList<>();
         try {
+            Files.createDirectories(Paths.get(workDir));
             for (Pair<String, String> file : task.getArtifacts()) {
                 downloadedFiles.add(copyFromJobDir(file.getFirst(), file.getSecond()));
             }
-            executeTask();
         } catch (Exception e) {
-            log.error("Error while executng task", e);
-        } finally {
-            for (String downloadedFile : downloadedFiles) {
+            log.error("Error while downloading files of task {}", task.getTaskId(), e);
+            cleanUpDownloadedFiles();
+        }
+        executeTask();
+    }
+
+    private void cleanUpDownloadedFiles() {
+        for (String downloadedFile : downloadedFiles) {
+            try {
                 Files.delete(Paths.get(downloadedFile));
+            } catch (IOException e) {
+                log.error("Couldn't delete {}", downloadedFile, e);
             }
         }
     }
@@ -83,13 +101,13 @@ public class TaskExecutor {
     private String copyFromJobDir(String remoteLoc, String localPath) throws Exception {
         FileStat stat = sdfsClient.get(remoteLoc);
         String localLoc = String.format("%s/%s", workDir, localPath);
-        log.info("Downloading {} from DFS to {}", remoteLoc, localPath);
+        log.info("Downloading {} from DFS to {}", remoteLoc, localLoc);
         Files.createFile(Paths.get(localLoc));
         try (InputStream fis = sdfsClient.open(remoteLoc);
-             OutputStream os = new FileOutputStream(localPath)) {
+             OutputStream os = new FileOutputStream(localLoc)) {
             IOUtils.copy(fis, os, (int) stat.getSize());
         }
-        log.info("upload complete");
+        log.info("download complete");
         return localLoc;
     }
 

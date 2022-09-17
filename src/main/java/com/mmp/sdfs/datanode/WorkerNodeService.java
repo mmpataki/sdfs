@@ -7,6 +7,7 @@ import com.mmp.sdfs.common.TaskDef;
 import com.mmp.sdfs.conf.SdfsClientConfig;
 import com.mmp.sdfs.conf.WorkerNodeConfig;
 import com.mmp.sdfs.server.Server;
+import com.mmp.sdfs.utils.HttpServer;
 import com.mmp.sdfs.utils.IOUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,6 +22,7 @@ import java.util.*;
 public class WorkerNodeService extends Server implements WorkerNode {
 
     String myId;
+    HttpServer httpServer;
     private final WorkerNodeConfig conf;
     private final SdfsClientConfig clientConfig;
     private final Map<String, Integer> taskStates = new HashMap<>();
@@ -35,6 +37,9 @@ public class WorkerNodeService extends Server implements WorkerNode {
             myId = getMyId();
         }
         new HeartBeater(conf, getMyId(), taskStates).start();
+        httpServer = new HttpServer(conf.getInfoPort());
+        httpServer.registerController(this);
+        httpServer.start();
     }
 
     private void formatDn() throws Exception {
@@ -81,7 +86,7 @@ public class WorkerNodeService extends Server implements WorkerNode {
 
     @Override
     public void startTask(TaskDef task) throws Exception {
-        String taskId = task.getId();
+        String taskId = task.getTaskId();
         try {
             taskStates.put(taskId, -9999);
             new TaskExecutor(task, clientConfig, status -> taskStates.put(taskId, status)).start();
@@ -128,6 +133,14 @@ public class WorkerNodeService extends Server implements WorkerNode {
         }
         os.close();
         return retlen;
+    }
+
+    @HttpServer.Api("/task/logs")
+    InputStream getLogs(Map<String, String> params) throws FileNotFoundException {
+        if(!params.containsKey("taskid")) {
+            throw new RuntimeException("Specify taskid as query parameter");
+        }
+        return new FileInputStream(TaskExecutor.logPath(params.get("taskid")));
     }
 
 }

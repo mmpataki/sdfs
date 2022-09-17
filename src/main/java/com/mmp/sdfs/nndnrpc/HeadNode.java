@@ -1,9 +1,6 @@
 package com.mmp.sdfs.nndnrpc;
 
-import com.mmp.sdfs.common.FileStat;
-import com.mmp.sdfs.common.LocatedBlock;
-import com.mmp.sdfs.common.TaskDef;
-import com.mmp.sdfs.common.TaskState;
+import com.mmp.sdfs.common.*;
 import com.mmp.sdfs.rpc.RpcExposed;
 import com.mmp.sdfs.rpc.RpcService;
 
@@ -33,10 +30,10 @@ public interface HeadNode extends RpcService {
     void closeFile(String path, long size) throws Exception;
 
     @RpcExposed
-    String startTask(TaskDef task) throws Exception;
+    String submitJob(Job task) throws Exception;
 
     @RpcExposed
-    List<TaskState> getStatusOf(String[] taskIds) throws Exception;
+    List<JobState> getStatusOf(String[] jobIds) throws Exception;
 
     @RpcExposed
     FileStat get(String path) throws Exception;

@@ -1,20 +1,15 @@
 package com.mmp.sdfs.namenode;
 
-import com.google.gson.Gson;
-import com.mmp.sdfs.client.DNClient;
 import com.mmp.sdfs.common.*;
 import com.mmp.sdfs.conf.HeadNodeConfig;
 import com.mmp.sdfs.nndnrpc.DnHeartbeat;
 import com.mmp.sdfs.nndnrpc.DnHeartbeatResponse;
 import com.mmp.sdfs.nndnrpc.HeadNode;
 import com.mmp.sdfs.rpc.RpcContext;
-import com.mmp.sdfs.server.Server;
+import com.mmp.sdfs.utils.HttpServer;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.net.Socket;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -24,49 +19,35 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class HeadNodeService extends Server implements HeadNode {
-
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Api {
-        String value();
-    }
-
-    interface Handler {
-        Object handle(Map<String, String> params) throws Exception;
-    }
-
-    Map<String, Handler> handlers = new HashMap<>();
-    Gson gson = new Gson();
-
+public class HeadNodeService implements HeadNode {
 
     private final HeadNodeConfig conf;
     Map<String, DnRef> dns = new HashMap<>();
-    Map<String, TaskState> taskState = new HashMap<>();
     NameStore store;
+    HttpServer httpServer;
+    Scheduler scheduler;
 
     public HeadNodeService(HeadNodeConfig conf) throws Exception {
-        super(conf.getInfoPort());
         this.conf = conf;
         if (!new File(conf.getNamedir()).exists()) {
             Files.createDirectory(Paths.get(conf.getNamedir()));
         }
         store = (NameStore) Class.forName(conf.getStoreClass()).getConstructor(HeadNodeConfig.class, Map.class).newInstance(conf, dns);
-        new BlockDeleter(conf, store, dns).start();
-        Arrays.stream(getClass().getDeclaredMethods()).filter(m -> m.isAnnotationPresent(Api.class)).forEach(m -> {
-            handlers.put(m.getAnnotation(Api.class).value(), (p) -> m.invoke(this, p));
-        });
-    }
 
-    @Override
-    public void start() throws IOException {
-        super.start();
+        new BlockDeleter(conf, store, dns).start();
+
+        httpServer = new HttpServer(conf.getInfoPort());
+        httpServer.registerController(this);
+        httpServer.start();
+
+        scheduler = new Scheduler(dns, conf);
+        scheduler.start();
     }
 
     public DnHeartbeatResponse heartBeat(DnHeartbeat dnRegister) {
         dns.put(dnRegister.getId(), new DnRef(dnRegister, RpcContext.getRpcContext().getSock().getInetAddress().getHostAddress()));
         dnRegister.getTaskStates().forEach((t, s) -> {
-            if (taskState.containsKey(t))
-                taskState.get(t).setState(s);
+            scheduler.taskFinished(t, s);
         });
         return new DnHeartbeatResponse();
     }
@@ -97,18 +78,13 @@ public class HeadNodeService extends Server implements HeadNode {
     }
 
     @Override
-    public String startTask(TaskDef task) throws Exception {
-        String taskId = task.getId();
-        String nodeId = pickABestNode(task);
-        DnAddress addr = dns.get(nodeId).getAddr();
-        new DNClient(conf).startTask(addr, task);
-        taskState.put(taskId, TaskState.builder().state(-9999).node(nodeId).id(taskId).build());
-        return taskId;
+    public String submitJob(Job job) throws Exception {
+        return scheduler.schedule(job);
     }
 
     @Override
-    public List<TaskState> getStatusOf(String[] taskIds) throws Exception {
-        return Arrays.stream(taskIds).map(id -> taskState.get(id)).collect(Collectors.toList());
+    public List<JobState> getStatusOf(String[] jobIds) throws Exception {
+        return Arrays.stream(jobIds).map(id -> scheduler.getJobStates().get(id)).collect(Collectors.toList());
     }
 
     @Override
@@ -116,93 +92,28 @@ public class HeadNodeService extends Server implements HeadNode {
         return store.get(path);
     }
 
-    private String pickABestNode(TaskDef task) {
-        return task.getPreferredNodes().get(0);
-    }
-
-
     // info api
-    @Api("/nodes")
+    @HttpServer.Api("/nodes")
     Object getDataNodeInfo(Map<String, String> params) {
         if (params.containsKey("id"))
             return dns.get(params.get("id"));
         return dns;
     }
 
-    @Api("/tasks")
-    Object getTaskState(Map<String, String> params) {
+    @HttpServer.Api("/jobs")
+    Object getJobsStates(Map<String, String> params) {
+        Map<String, JobState> jobs = scheduler.getJobStates();
         if (params.containsKey("id"))
-            return taskState.get(params.get("id"));
+            return jobs.get(params.get("id"));
         if (params.containsKey("nodeid")) {
             String node = params.get("nodeid");
-            Map<String, TaskState> tasks = new HashMap<>();
-            taskState.values().stream().filter(t -> t.getNode().equals(node)).forEach(t -> tasks.put(t.getId(), t));
-            return tasks;
+            Map<String, JobState> ret = new HashMap<>();
+            jobs.values().stream()
+                    .filter(j -> j.getTaskStates().values().stream().anyMatch(t -> t.getNode().equals(node)))
+                    .forEach(j -> ret.put(j.getJobId(), j));
+            return ret;
         }
-        return taskState;
+        return jobs;
     }
 
-    boolean __debug = true;
-
-    @Override
-    public void process(Socket sock) throws Exception {
-        // simple HTTP server
-        String resource = new BufferedReader(new InputStreamReader(sock.getInputStream())).readLine().split(" ")[1];
-        Map<String, String> params = new HashMap<>();
-        if (resource.contains("?")) {
-            Arrays.stream(resource.split("\\?")[1].split("&")).forEach(kvp -> {
-                if (kvp.contains("="))
-                    params.put(kvp.substring(0, kvp.indexOf('=')), kvp.substring(kvp.indexOf('=') + 1));
-            });
-            resource = resource.substring(0, resource.indexOf('?'));
-        }
-        if (resource.startsWith("/api")) {
-            String api = resource.substring(4);
-            if (!handlers.containsKey(api)) {
-                sendHeader(sock.getOutputStream(), 404);
-            } else {
-                try {
-                    Object ret = handlers.get(api).handle(params);
-                    sendHeader(sock.getOutputStream(), 200);
-                    String s = gson.toJson(ret);
-                    sock.getOutputStream().write(s.getBytes());
-                } catch (Exception e) {
-                    log.error("Error while handling req: {}", api, e);
-                    sendHeader(sock.getOutputStream(), 500);
-                    sock.getOutputStream().write(e.getMessage().getBytes());
-                }
-            }
-        } else {
-            InputStream is = null;
-            resource = resource.equals("/") ? "/index.html" : resource;
-            try {
-                if (__debug) {
-                    is = new FileInputStream("C:\\Users\\mpataki\\Desktop\\sdfs\\src\\main\\resources\\public" + resource);
-                } else {
-                    is = getClass().getResourceAsStream("/public" + resource);
-                }
-                sendHeader(sock.getOutputStream(), 200);
-                copyData(is, sock.getOutputStream());
-                is.close();
-            } catch (Exception e) {
-                log.error("error while processing req: {}", resource, e);
-                sendHeader(sock.getOutputStream(), 404);
-            }
-        }
-        sock.getOutputStream().write("\n\n".getBytes());
-        sock.getOutputStream().flush();
-        sock.close();
-    }
-
-    private static void copyData(InputStream in, OutputStream out) throws Exception {
-        byte[] buffer = new byte[8 * 1024];
-        int len;
-        while ((len = in.read(buffer)) > 0) {
-            out.write(buffer, 0, len);
-        }
-    }
-
-    private void sendHeader(OutputStream os, int code) throws IOException {
-        os.write(String.format("HTTP/1.1 %d OK\n\n", code).getBytes());
-    }
 }

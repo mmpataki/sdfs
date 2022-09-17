@@ -62,8 +62,8 @@
             `
         }
         function diskUsage(n) {
-            let x = n => (n / (1024 * 1024 * 1024)).toFixed(2);
-            let disk = Object.entries(n.sysInfo.disks).map(([n, d]) => {
+            let x = n => (n / (1024 * 1024 * 1024)).toFixed(2), s = n.sysInfo;
+            let disk = Object.entries(s.disks).map(([n, d]) => {
                 let f = d.first - d.second, t = d.first;
                 return getStatusBar(n, f, t, 'seagreen', `used (${x(f)}GB)`, `total (${x(t)} GB)`, 'margin-left: 10px')
             }).join('\n')
@@ -79,37 +79,129 @@
             return getStatusBar('Mem', f, t, 'skyblue', `used (${x(f)}GB)`, `total (${x(t)} GB)`, 'font-weight: bold')
         }
 
-        function getTaskStats(n) {
+        function getCpuUsage(n) {
+            let x = n => (n / (1024 * 1024 * 1024)).toFixed(2), t = 100, s = n.sysInfo, f = s.cpuPercent;
             return `
-                <div style='margin: 5px 0px'>
-                    <small><strong>Tasks</strong>: ${n.taskStat ? n.taskStat.cnt : 0}</small>
+                <div>
+                    ${getStatusBar('CPU', f, t, 'skyblue', `used (${x(f)}%s)`, ``, 'font-weight: bold')}
                 </div>
             `
         }
-        function load() {
-            Promise.all([get('/api/nodes').then(resp => resp.json), get('/api/tasks').then(resp => resp.json)])
-                .then(([nodes, tasks]) => {
 
-                    Object.values(tasks).forEach(task => {
-                        if(!nodes[task.node]['taskStat']) {
-                            nodes[task.node]['taskStat'] = {cnt: 0, states: {}}
-                        }
-                        nodes[task.node].taskStat.cnt++;
-                        nodes[task.node].taskStat.states[task.state]++;
+        function getTaskStats(n) {
+            return `
+                <div style='margin: 5px 0px; display: flex'>
+                    <small style="flex-grow: 1">CPU cores: <strong>${n.sysInfo.numCores}</strong></small>
+                    <small style="flex-grow: 1">Tasks: <strong>${n.taskStat ? n.taskStat.cnt : 0}</strong></small>
+                    <small>Blocks: <strong>${n.blocks}</strong></small>
+                </div>
+            `
+        }
+
+        function getTextBlock(h, txt, lbl) {
+            return `
+                <div style='display: flex; flex-direction: column; justify-content: center; padding: 0px 20px'>
+                    <div style='font-size: ${h - 30}px; height: ${h - 20}px; justify-content: center; display: flex'>
+                        <span>${txt}</span>
+                    </div>
+                    <div style="height: 20px; text-align: center">${lbl}</div>
+                </div>
+            `
+        }
+
+        function drawdountChart(ele, h, width) {
+            let data = donutData[+ele.getAttribute('xdata')]
+            let total = data.reduce((s, p) => s + p.value, 0)
+            if (total != 100) data.push({
+                value: 100 - total,
+                color: '#eee'
+            })
+
+            var chart = document.createElement("canvas");
+            chart.width = chart.height = h;
+            var canvas = chart.getContext("2d");
+            ele.appendChild(chart);
+
+            this.x, this.y, this.radius, this.lineWidth, this.strockStyle, this.from, this.to = null;
+            this.x = this.y = h / 2;
+            this.radius = (h - (width * 2)) / 2;
+            this.from = 0;
+            this.to = Math.PI * 2;
+            this.lineWidth = width;
+            this.strockStyle = "#fff";
+
+            canvas.beginPath();
+            canvas.lineWidth = this.lineWidth;
+            canvas.strokeStyle = this.strockStyle;
+            canvas.arc(this.x, this.y, this.radius, this.from, this.to);
+            canvas.stroke();
+            var df = 0;
+            for (var i = 0; i < data.length; i++) {
+                canvas.beginPath();
+                canvas.strokeStyle = data[i].color;
+                canvas.arc(this.x, this.y, this.radius, df, df + (Math.PI * 2) * (data[i].value / 100));
+                canvas.stroke();
+                df += (Math.PI * 2) * (data[i].value / 100);
+            }
+
+        }
+
+        let donutData = []
+        function getDonut(h, total, filled, lbl, color) {
+            let data = [{ value: 100 * (filled / total), color: color }], key = donutData.length
+            donutData.push(data)
+            return `
+                <div>
+                    <div xdata="${key}">
+                        <img src onerror="drawdountChart(this.parentElement, ${h - 20}, 10)">
+                    </div>
+                    <div style="text-align: center">${lbl}</div>
+                </div>
+            `
+        }
+
+        function load() {
+            Promise.all([get('/api/nodes').then(resp => resp.json), get('/api/jobs').then(resp => resp.json)])
+                .then(([nodes, jobs]) => {
+
+                    Object.values(jobs).forEach(job => {
+                        let tasks = job.taskStates
+                        Object.values(tasks).forEach(task => {
+                            if (!nodes[task.node]['taskStat']) {
+                                nodes[task.node]['taskStat'] = { cnt: 0, states: {} }
+                            }
+                            nodes[task.node].taskStat.cnt++;
+                            nodes[task.node].taskStat.states[task.state]++;
+                        })
                     })
 
                     console.log(nodes)
+                    let reducer = x => Object.values(nodes).reduce((s, t) => s + x(t), 0)
+                    let totMem = reducer(n => n.sysInfo.memorySize), availMem = reducer(n => n.sysInfo.memoryAvailable)
+                    let totCpu = 100, usedCpu = reducer(n => n.sysInfo.cpuPercent)
+                    let totTasks = reducer(n => n.taskStat.cnt), totBlocks = reducer(n => n.blocks)
 
-                    g('output').innerHTML = Object.values(nodes).map(node => {
-                        return `
-                        <div class='node'>
-                            ${getHostName(node)}
-                            ${getTaskStats(node)}
-                            ${diskUsage(node)}
-                            ${memUsage(node)}
+                    g('output').innerHTML = `
+                        <div style="display: flex; margin: 10px 0px 30px 0px">
+                            <div style="flex-grow: 1; justify-content: center; display: flex">${getTextBlock(100, Object.keys(nodes).length, 'Node(s)')}</div>
+                            <div style="flex-grow: 1; justify-content: center; display: flex">${getDonut(100, totMem, totMem - availMem, 'Memory', 'green')}</div>
+                            <div style="flex-grow: 1; justify-content: center; display: flex">${getDonut(100, totCpu, usedCpu, 'CPU', 'orange')}</div>
+                            <div style="flex-grow: 1; justify-content: center; display: flex">${getTextBlock(100, totTasks, 'Active jobs')}</div>
+                            <div style="flex-grow: 1; justify-content: center; display: flex">${getTextBlock(100, totBlocks, 'Blocks')}</div>
                         </div>
-                    `
+                        ${Object.values(nodes).map(node => {
+                        return `
+                                    <div class='node'>
+                                        ${getHostName(node)}
+                                        ${getTaskStats(node)}
+                                        ${diskUsage(node)}
+                                        ${memUsage(node)}
+                                        ${getCpuUsage(node)}
+                                    </div>
+                                `
                     }).join('\n')
+                        }
+                    `
                 })
         }
         window.onload = function () {
@@ -120,7 +212,7 @@
 </head>
 
 <body>
-    <div style="width: 60%; margin: auto">
+    <div style="width: 80%; margin: auto">
         <h2>Nodes</h2>
         <div id="output"></div>
     </div>

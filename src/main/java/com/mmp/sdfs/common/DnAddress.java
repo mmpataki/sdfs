@@ -9,5 +9,5 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class DnAddress implements Serializable {
     String id, hostname;
-    int port, dataPort;
+    int port, dataPort, infoPort;
 }

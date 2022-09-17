@@ -7,9 +7,6 @@ import lombok.Setter;
 @Setter
 public class HeadNodeConfig extends SdfsConfig {
 
-    @Argument(keys = {"-ip", "--infoport"}, required = true, help = "info port", defValue = "5002")
-    int infoPort;
-
     @Argument(keys = {"-d", "--namedir"}, required = true, help = "namenode directory", defValue = "namenode")
     String namedir;
 

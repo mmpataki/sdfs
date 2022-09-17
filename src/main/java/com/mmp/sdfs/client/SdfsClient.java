@@ -5,15 +5,14 @@ import com.mmp.sdfs.conf.SdfsClientConfig;
 import com.mmp.sdfs.utils.IOUtils;
 import com.mmp.sdfs.utils.Pair;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 public class SdfsClient {
@@ -23,6 +22,16 @@ public class SdfsClient {
 
     @Getter
     ProxyFactory proxyFactory;
+
+    public interface JobUpdateCallBack {
+        void jobUpdated(JobState js);
+
+        void taskUpdated(TaskState status);
+    }
+
+    private Thread taskMonitor = null;
+    private Map<String, Pair<Job, JobUpdateCallBack>> jobs = new HashMap<>();
+    private Map<String, JobState> jobStates = new HashMap<>();
 
     public SdfsClient(SdfsClientConfig conf) {
         this.conf = conf;
@@ -62,32 +71,83 @@ public class SdfsClient {
         return proxyFactory.getNNProxy().getBlocks(path);
     }
 
-    public String startTask(TaskDef taskDef) throws Exception {
-        taskDef.setId(UUID.randomUUID().toString());
+    public String submit(Job job, JobUpdateCallBack callBack) throws Exception {
+
+        String uuid = UUID.randomUUID().toString();
+        List<Pair<String, String>> artifacts = job.getArtifacts();
         List<Pair<String, String>> remoteArtifacts = new ArrayList<>();
+        job.setArtifacts(remoteArtifacts);
         try {
-            for (Pair<String, String> artifact : taskDef.getArtifacts()) {
-                String remotePath = String.format("/jobs/%s/%s", taskDef.getId(), artifact.getSecond());
+            for (Pair<String, String> artifact : artifacts) {
+                String remotePath = String.format("/jobs/%s/%s", uuid, artifact.getSecond());
                 log.info("Uploading {} -> {}", artifact.getFirst(), remotePath);
                 upload(artifact.getFirst(), remotePath);
                 remoteArtifacts.add(new Pair<>(remotePath, artifact.getSecond()));
             }
-            taskDef.setArtifacts(remoteArtifacts);
-            return proxyFactory.getNNProxy().startTask(taskDef);
+            job.setArtifacts(remoteArtifacts);
+            String ret = proxyFactory.getNNProxy().submitJob(job);
+            if (taskMonitor == null) {
+                jobs.put(ret, new Pair<>(job, callBack));
+                taskMonitor = new Thread(new TaskMonitor(), "task-monitor");
+                taskMonitor.start();
+            }
+            return ret;
         } catch (Exception e) {
             log.error("Error while starting task", e);
-            for (Pair<String, String> remoteArtifact : remoteArtifacts) {
-                try {
-                    delete(remoteArtifact.getFirst());
-                } catch (Exception fde) {
-                    log.error("Error while deleting file: {}", remoteArtifact.getFirst(), e);
-                }
-            }
+            cleanupTask(job);
             throw e;
         }
     }
 
-    public List<TaskState> getStatusOf(String... taskIds) throws Exception {
+    class TaskMonitor implements Runnable {
+
+        @SneakyThrows
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    String[] ids = jobs.keySet().toArray(new String[0]);
+                    if (ids.length != 0) {
+                        List<JobState> statuses = getStatusOf(ids);
+                        statuses.forEach(js -> {
+                            JobState oldJob = jobStates.get(js.getJobId());
+                            Pair<Job, JobUpdateCallBack> jobAndCallback = jobs.get(js.getJobId());
+                            if (oldJob == null || oldJob.getState() != js.getState())
+                                jobAndCallback.getSecond().jobUpdated(js);
+                            for (TaskState ts : js.getTaskStates().values()) {
+                                if ((oldJob == null || oldJob.getTaskState(ts.getTaskId()).getExitCode() != ts.getExitCode())) {
+                                    jobAndCallback.getSecond().taskUpdated(ts);
+                                }
+                            }
+                            if (js.hasCompleted()) {
+                                Pair<Job, JobUpdateCallBack> taskAndCall = jobs.get(js.getJobId());
+                                taskAndCall.getSecond().jobUpdated(js);
+                                jobs.remove(js.getJobId());
+                                jobStates.remove(js.getJobId());
+                                cleanupTask(taskAndCall.getFirst());
+                            }
+                            jobStates.put(js.getJobId(), js);
+                        });
+                    }
+                } catch (Exception e) {
+                    log.error("Error while fetching task states", e);
+                }
+                Thread.sleep(5000);
+            }
+        }
+    }
+
+    private void cleanupTask(Job job) {
+        for (Pair<String, String> artifact : job.getArtifacts()) {
+            try {
+                delete(artifact.getFirst());
+            } catch (Exception e) {
+                log.error("Deleting {} failed", artifact.getFirst(), e);
+            }
+        }
+    }
+
+    public List<JobState> getStatusOf(String... taskIds) throws Exception {
         return proxyFactory.getNNProxy().getStatusOf(taskIds);
     }
 

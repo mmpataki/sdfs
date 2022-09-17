@@ -12,7 +12,7 @@ import java.util.Map;
 @Builder
 public class TaskDef implements Serializable {
 
-    String id;
+    String taskId, taskLabel;
 
     List<String> command;
 
@@ -21,5 +21,9 @@ public class TaskDef implements Serializable {
     List<Pair<String, String>> artifacts;
 
     Map<String, String> env;
+
+    Map<String, Long> stateChanges;
+
+    transient TaskState state;
 
 }

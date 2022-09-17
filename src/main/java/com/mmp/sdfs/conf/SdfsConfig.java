@@ -8,6 +8,9 @@ import com.mmp.sdfs.rpc.RpcSerde;
 @Setter
 public class SdfsConfig extends Configuration {
 
+    @Argument(keys = {"-ip", "--infoport"}, required = true, help = "info port", defValue = "5002")
+    int infoPort;
+
     @Argument(keys = {"--nnhost"}, help = "Namenode host", defValue = "localhost")
     String nnHost;
 

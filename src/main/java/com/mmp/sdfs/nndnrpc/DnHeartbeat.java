@@ -7,7 +7,7 @@ import java.util.Map;
 
 @Data
 public class DnHeartbeat implements Serializable {
-    int port, dataPort;
+    int port, dataPort, infoPort;
     String id;
     long blocks;
     Map<String, Integer> taskStates;
