@@ -1,0 +1,62 @@
+body,
+html {
+    padding: 0px;
+    margin: 0px;
+    font-family: sans-serif;
+}
+
+.node {
+    width: 250px;
+    border: solid 2px #f0f0f0;
+    margin: 5px;
+    padding: 15px;
+    float: left;
+    border-radius: 5px;
+}
+
+.status-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    margin: 5px 0px;
+}
+
+.status-bar-box {
+    flex-grow: 1;
+    height: 5px;
+    margin-left: 5px;
+    border: solid 1px #d0d0d0;
+}
+
+.status-bar-filled {
+    height: 100%;
+}
+
+.status-bar-lbl {
+    width: 60%;
+    max-width: 60%;
+    overflow: hidden;
+    display: block;
+}
+
+small {
+    font-size: 0.7em;
+}
+
+.header {
+    display: flex;
+    height: 50px;
+    background: seagreen;
+    align-items: center;
+    color: white;
+    padding: 0px 10px
+}
+
+.header a {
+    margin-left: 10px;
+    color: white;
+}
+
+th, td {
+    padding: 2px 5px;
+}

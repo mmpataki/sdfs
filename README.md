@@ -52,7 +52,7 @@ SDFS is simple, easy to install (copy a jar) and has less features. If you have 
   $ java -jar sdfs.jar namenode --help
    switch                              reqd multiple help
    -d, --namedir <namedir>               *           namenode directory (default: namenode)
-   --storeclass <storeClass>             *           namenode store class (default: com.mmp.sdfs.namenode.SqliteNameStore)
+   --storeclass <storeClass>             *           namenode store class (default: com.mmp.sdfs.headnode.SqliteNameStore)
    --nnhost <nnHost>                                 Namenode host (default: localhost)
    --nnport <nnPort>                                 Namenode port (default: 5001)
    --rpcSerde <rpcSerde>                             The RPC serde class used to serialize/deserialize RPC messages (default: com.mmp.sdfs.rpc.javaserde.JavaSerde)

@@ -1,4 +1,4 @@
-package com.mmp.sdfs.nncrpc;
+package com.mmp.sdfs.hncrpc;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

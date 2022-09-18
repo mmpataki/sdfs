@@ -1,4 +1,4 @@
-package com.mmp.sdfs.namenode;
+package com.mmp.sdfs.headnode;
 
 import com.mmp.sdfs.client.DNClient;
 import com.mmp.sdfs.conf.HeadNodeConfig;

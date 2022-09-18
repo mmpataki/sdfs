@@ -28,14 +28,14 @@ public class SdfsOutputStream extends OutputStream {
         proxyFactory = client.getProxyFactory();
 
         buffer = new byte[conf.getBlockSize()];
-        proxyFactory.getNNProxy().create(path);
+        proxyFactory.getHNProxy().create(path);
     }
 
     @SneakyThrows
     @Override
     public void write(int b) throws IOException {
         if(currentBlock == null) {
-            currentBlock = proxyFactory.getNNProxy().addBlock(path);
+            currentBlock = proxyFactory.getHNProxy().addBlock(path);
             offset = 0;
         }
         buffer[offset++] = (byte) b;
@@ -55,6 +55,6 @@ public class SdfsOutputStream extends OutputStream {
     @Override
     public void close() throws IOException {
         flush();
-        proxyFactory.getNNProxy().closeFile(path, offset);
+        proxyFactory.getHNProxy().closeFile(path, offset);
     }
 }

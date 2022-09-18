@@ -1,4 +1,4 @@
-package com.mmp.sdfs.namenode;
+package com.mmp.sdfs.headnode;
 
 import com.mmp.sdfs.common.DnAddress;
 import com.mmp.sdfs.common.FileStat;
@@ -25,7 +25,7 @@ public abstract class NameStore {
 
     protected List<DnAddress> getDnLocations(int replicas) {
         List<DnRef> nodes = new ArrayList<>(dataNodes.values());
-        nodes.sort(Comparator.comparingLong(DnRef::getBlocks));
+        nodes.sort(Comparator.comparingLong(dn -> dn.getState().getBlocks()));
         return nodes.subList(Math.max(0, nodes.size() - replicas), nodes.size()).stream().map(DnRef::getAddr).collect(Collectors.toList());
     }
 

@@ -1,4 +1,4 @@
-package com.mmp.sdfs.datanode;
+package com.mmp.sdfs.workernode;
 
 import com.mmp.sdfs.client.SdfsClient;
 import com.mmp.sdfs.common.FileStat;

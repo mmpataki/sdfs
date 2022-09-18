@@ -1,7 +1,7 @@
 package com.mmp.sdfs;
 
-import com.mmp.sdfs.datanode.WorkerNodeApp;
-import com.mmp.sdfs.namenode.HeadNodeApp;
+import com.mmp.sdfs.workernode.WorkerNodeApp;
+import com.mmp.sdfs.headnode.HeadNodeApp;
 import com.mmp.sdfs.shell.Shell;
 
 import java.util.Arrays;

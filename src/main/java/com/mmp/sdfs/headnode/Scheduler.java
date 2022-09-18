@@ -1,4 +1,4 @@
-package com.mmp.sdfs.namenode;
+package com.mmp.sdfs.headnode;
 
 import com.mmp.sdfs.client.DNClient;
 import com.mmp.sdfs.common.*;
@@ -17,8 +17,8 @@ public class Scheduler implements Runnable {
     private final HeadNodeConfig conf;
     private final Map<String, DnRef> workerNodes;
 
-    Map<String, Job> jobs = new HashMap<>();
-    Map<String, JobState> jobStates = new HashMap<>();
+    LinkedHashMap<String, Job> jobs = new LinkedHashMap<>();
+    LinkedHashMap<String, JobState> jobStates = new LinkedHashMap<>();
     Queue<Pair<TaskDef, Job>> taskQ = new LinkedList<>();
 
 
@@ -49,19 +49,19 @@ public class Scheduler implements Runnable {
     @Override
     public void run() {
         while (true) {
-            if (thereAreResources()) {
-                if (thereAreTasks()) {
-                    Pair<TaskDef, Job> taskAndJob = pickATask();
-                    if (taskAndJob != null) {
-                        try {
-                            runThe(taskAndJob);
-                        } catch (Exception e) {
-                            log.error("Error submitting a task: {}", taskAndJob);
-                        }
+            if (thereAreResources() && thereAreTasks()) {
+                Pair<TaskDef, Job> taskAndJob = pickATask();
+                if (taskAndJob != null) {
+                    try {
+                        runThe(taskAndJob);
+                    } catch (Exception e) {
+                        log.error("Error submitting a task: {}", taskAndJob);
                     }
                 }
+
+            } else {
+                waitForAWhile();
             }
-            waitForAWhile();
         }
     }
 
@@ -76,12 +76,12 @@ public class Scheduler implements Runnable {
         JobState js = job.getState();
         DnAddress addr = pickANode(task);
         log.info("Starting: {} ({}) / {} ({}) on {}", js.getJobId(), js.getJobLabel(), task.getTaskId(), task.getTaskLabel(), addr);
-        js.taskStarted(task.getTaskId(), addr.getId());
+        js.taskAssigned(task.getTaskId(), addr.getId());
         try {
             task.setArtifacts(job.getArtifacts());
             new DNClient(conf).startTask(addr, task);
         } catch (Exception e) {
-            js.taskCompleted(task.getTaskId(), -1);
+            js.taskUpdated(task.getTaskId(), -1);
             throw e;
         }
     }
@@ -112,8 +112,9 @@ public class Scheduler implements Runnable {
         return null;
     }
 
-    public void taskFinished(String taskId, Integer status) {
+    public void taskUpdated(String taskId, Integer status) {
         String jobId = taskId.split("/")[0];
-        jobStates.get(jobId).taskCompleted(taskId, status);
+        if (jobStates.containsKey(jobId))
+            jobStates.get(jobId).taskUpdated(taskId, status);
     }
 }

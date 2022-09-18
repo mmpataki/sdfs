@@ -36,7 +36,7 @@ public class SdfsInputStream extends InputStream {
     public int read() throws IOException {
         if (currentBlock == null) {
             if (blocks == null) {
-                blocks = proxyFactory.getNNProxy().getBlocks(path);
+                blocks = proxyFactory.getHNProxy().getBlocks(path);
             }
             if (curBlock >= blocks.size())
                 return -1;

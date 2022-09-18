@@ -13,7 +13,11 @@ import java.util.Map;
 public class JobState implements Serializable {
 
 
-    enum State implements Serializable {
+    public boolean hasRunOnNode(String node) {
+        return getTaskStates().values().stream().anyMatch(t -> t.getNode().equals(node));
+    }
+
+    public enum State implements Serializable {
         ACCEPTED,
         QUEUED,
         RUNNING,
@@ -21,6 +25,9 @@ public class JobState implements Serializable {
         SUCCEEDED,
         ABORTED;
 
+        public boolean isCompleted() {
+            return ordinal() > RUNNING.ordinal();
+        }
     }
 
     State state;
@@ -48,30 +55,44 @@ public class JobState implements Serializable {
         job.setState(this);
     }
 
-    public void taskCompleted(String taskId, Integer s) {
-        getTaskStates().get(taskId).completed(s);
-        if (s != 0 && s != -9999) {
-            for (TaskState ts : taskStates.values()) {
-                if (!ts.hasRun()) {
-                    ts.abort();
-                }
-            }
-            stateChanged(State.FAILED);
+    public JobState(JobState js, String node) {
+        state = js.state;
+        jobId = js.jobId;
+        jobLabel = js.jobLabel;
+        stateChanges = js.stateChanges;
+        taskStates = new HashMap<>();
+        js.taskStates.values().stream().filter(ts -> ts.getNode().equals(node)).forEach(ts -> taskStates.put(ts.getTaskId(), ts));
+    }
+
+    public void taskUpdated(String taskId, Integer s) {
+        if (s == -9999) {
+            getTaskStates().get(taskId).running();
+            running();
         } else {
+            // task has completed
+            getTaskStates().get(taskId).completed(s);
             completed++;
-            if (completed == taskStates.size())
-                stateChanged(State.SUCCEEDED);
+            if (s == 0) {
+                if (completed >= taskStates.size())
+                    stateChanged(State.SUCCEEDED);
+            } else {
+                for (TaskState ts : taskStates.values()) {
+                    if (!ts.hasRun()) {
+                        ts.abort();
+                    }
+                }
+                stateChanged(State.FAILED);
+            }
         }
     }
 
-    public void taskStarted(String taskId, String nodeId) {
-        running();
-        getTaskStates().get(taskId).started(nodeId);
+    public void taskAssigned(String taskId, String nodeId) {
+        getTaskStates().get(taskId).nodeAssigned(nodeId);
     }
 
     public void queued() {
         stateChanged(State.QUEUED);
-        getTaskStates().values().forEach(ts -> ts.queued());
+        getTaskStates().values().forEach(TaskState::queued);
     }
 
     public void running() {

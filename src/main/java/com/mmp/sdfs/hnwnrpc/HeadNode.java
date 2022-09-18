@@ -1,4 +1,4 @@
-package com.mmp.sdfs.nndnrpc;
+package com.mmp.sdfs.hnwnrpc;
 
 import com.mmp.sdfs.common.*;
 import com.mmp.sdfs.rpc.RpcExposed;
@@ -8,8 +8,10 @@ import java.util.List;
 
 public interface HeadNode extends RpcService {
 
+    @RpcExposed void register(DnProfile profile) throws Exception;
+
     @RpcExposed
-    DnHeartbeatResponse heartBeat(DnHeartbeat dnRegister);
+    DnHeartbeatResponse heartBeat(DNState dnRegister) throws Exception;
 
     @RpcExposed
     FileStat create(String path) throws Exception;

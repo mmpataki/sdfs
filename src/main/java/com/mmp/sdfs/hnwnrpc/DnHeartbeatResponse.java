@@ -1,9 +1,8 @@
-package com.mmp.sdfs.nndnrpc;
+package com.mmp.sdfs.hnwnrpc;
 
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.List;
 
 @Data
 public class DnHeartbeatResponse implements Serializable {

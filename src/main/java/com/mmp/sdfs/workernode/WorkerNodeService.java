@@ -1,4 +1,4 @@
-package com.mmp.sdfs.datanode;
+package com.mmp.sdfs.workernode;
 
 import com.mmp.sdfs.cdnrpc.DataNodeOp;
 import com.mmp.sdfs.cdnrpc.ReadOp;

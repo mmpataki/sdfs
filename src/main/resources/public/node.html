@@ -5,91 +5,11 @@
     <meta charset="UTF-8">
     <title>Node</title>
     <script src="./common.js"></script>
-    <style>
-        .node {
-            width: 250px;
-            border: solid 2px #f0f0f0;
-            margin: 5px;
-            padding: 15px;
-            float: left;
-            border-radius: 5px;
-        }
-
-        .status-bar {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            margin: 5px 0px;
-        }
-
-        .status-bar-box {
-            flex-grow: 1;
-            height: 8px;
-            margin-left: 5px;
-            border: solid 1px #d0d0d0;
-        }
-
-        .status-bar-filled {
-            height: 100%;
-        }
-
-        .status-bar-lbl {
-            width: 35px;
-            max-width: 35px;
-            overflow: hidden;
-            display: block;
-        }
-
-        small {
-            font-size: 0.7em;
-        }
-    </style>
+    <link href="./styles.css" rel="stylesheet">
     <script>
         function g(i) { return document.getElementById(i) }
         function getHostName(n) {
-            return `<h2>${n.addr.hostname}</h2>ID: <strong>${n.addr.id}</strong>`
-        }
-        function getStatusBar(lbl, fill, total, color, filllbl, totallbl, lblstyle) {
-            return `
-                <div class="status-bar">
-                    <div class='status-bar-lbl'>
-                        <small style='${lblstyle}'>${lbl}</small>
-                    </div>
-                    <div class="status-bar-box" title="${totallbl}">
-                        <div style="width: ${(fill / total) * 100}%; background: ${color};" class="status-bar-filled" title="${filllbl}"></div>
-                    </div>
-                </div>
-            `
-        }
-        function diskUsage(n) {
-            let x = n => (n / (1024 * 1024 * 1024)).toFixed(2);
-            let disk = Object.entries(n.sysInfo.disks).map(([n, d]) => {
-                let f = d.first - d.second, t = d.first;
-                return getStatusBar(n, f, t, 'seagreen', `used (${x(f)}GB)`, `total (${x(t)} GB)`, 'margin-left: 10px')
-            }).join('\n')
-            return `
-                <div style="margin: 20px 0px">
-                    <small><strong>Disks</strong></small>
-                    ${disk}
-                    </div>
-            `
-        }
-        function memUsage(n) {
-            let x = n => (n / (1024 * 1024 * 1024)).toFixed(2), t = n.sysInfo.memorySize, f = n.sysInfo.memoryAvailable;
-            return `
-            <div style="margin: 20px 0px">
-                ${getStatusBar('Mem', f, t, 'skyblue', `used (${x(f)}GB)`, `total (${x(t)} GB)`, 'font-weight: bold')}
-                </div>
-                `
-        }
-
-        function getCpuUsage(n) {
-            let x = n => (n / (1024 * 1024 * 1024)).toFixed(2), t = 100, s = n.sysInfo, f = s.cpuPercent;
-            return `
-                <div>
-                    ${getStatusBar('CPU', f, t, 'skyblue', `used (${x(f)}%s)`, ``, 'font-weight: bold')}
-                </div>
-            `
+            return `<h2>${n.addr.hostname}<small style='margin-left: 10px'><strong>(${n.addr.id}, ${n.profile.os})</strong></small></h2>`
         }
 
         function getTask(t) {
@@ -147,12 +67,13 @@
         }
 
         function getStateLbl(state) {
-            let cols  ={
+            let cols = {
                 succeeded: ['#E8F5E9', '#1B5E20'],
                 failed: ['#FFEBEE', '#B71C1C'],
                 running: ['#FFF3E0', '#E65100'],
                 aborted: ['#FCE4EC', '#880E4F'],
-                queued: ['#E3F2FD', '#0D47A1']
+                queued: ['#E3F2FD', '#0D47A1'],
+                assigned: ['hotred', 'hotpink']
             }
             state = state.toLowerCase()
             console.log(state)
@@ -163,11 +84,11 @@
             `
         }
 
-        function getJob(i, job) {
+        function getJob(job) {
             return `
                 <tr>
                     <th>
-                        ${i}
+                        ${job.jobId}
                     </th>
                     <td>${job.jobLabel}</td>
                     <td>${getStateLbl(job.state)}</td>
@@ -181,19 +102,18 @@
                         ${getStateChange(job.stateChanges)}
                     </td>
                 </tr>
-                <tr><td style="padding-left: 10px">Tasks</td></tr>
+                <tr><td style="padding-left: 10px"><small><strong>Tasks</strong></small></td></tr>
                 ${Object.values(job.taskStates).map(t => getTask(t)).join('\n')}
                 <tr><td style="padding: 10px"></td></tr>
             `
         }
-
 
         function getJobs(jobs) {
             return `
                 <div style='margin: 40px 0px 0px 0px'>
                     <h3>Jobs: ${Object.keys(jobs).length}</h3>
                     <table style="width: 100%; text-align: left">
-                        <tr>
+                        <tr style='background: #e0e0e0'>
                             <th>Job Id</th>
                             <th>Label</th>
                             <th>State</th>
@@ -201,11 +121,12 @@
                             <th>Last update</th>
                             <th>Timeline</th>
                         </tr>
-                        ${Object.entries(jobs).map(([i, job]) => getJob(i, job)).join('\n')}
+                        ${Object.values(jobs).sort((b, a) => a.stateChanges[0].second - b.stateChanges[0].second).map(job => getJob(job)).join('\n')}
                     </table>
                 </div>
             `
         }
+        
         function load(m) {
             Promise.all([get(`/api/nodes?id=${m.id}`).then(resp => resp.json), get(`/api/jobs?nodeid=${m.id}`).then(resp => resp.json)])
                 .then(([node, jobs]) => {
@@ -216,14 +137,32 @@
                         Object.values(j.taskStates).forEach(t => t.nodeDef = node)
                     })
 
+                    Object.values(jobs).forEach(job => {
+                        let tasks = job.taskStates
+                        Object.values(tasks).forEach(task => {
+                            if(!task.node) return
+                            if (!nodes[task.node]['taskStat']) {
+                                nodes[task.node]['taskStat'] = { cnt: 0, states: {} }
+                            }
+                            nodes[task.node].taskStat.cnt++;
+                            nodes[task.node].taskStat.states[task.state]++;
+                        })
+                    })
+
+                    console.log(nodes)
+                    let reducer = x => Object.values(nodes).reduce((s, t) => s + x(t), 0)
+                    let totMem = reducer(n => n.profile.memorySize), usedMem = totMem - reducer(n => n.state.memoryAvailable)
+                    let totCpu = 100, usedCpu = reducer(n => n.state.cpuPercent), totCores = reducer(n => n.profile.cores)
+                    let totTasks = reducer(n => (n.taskStat ? n.taskStat.cnt || 0 : 0)), totBlocks = reducer(n => n.state.blocks)
+
                     g('output').innerHTML = Object.values(nodes).map(node => {
                         return `
                             ${getHostName(node)}
-                            ${diskUsage(node)}
-                            ${memUsage(node)}
-                            ${getCpuUsage(node)}
+                            ${getSummary(nodes, jobs)}
+                            <div style="font-size: .8em">
                             ${getJobs(jobs)}
-                    `
+                            </div>
+                        `
                     }).join('\n')
                 })
         }
@@ -231,14 +170,21 @@
             const params = new URLSearchParams(window.location.search), m = {};
             params.forEach((v, k) => m[k] = v)
             load(m)
-            //setInterval(() => load(), 5000);
+            setInterval(() => load(m), 5000);
         }
     </script>
 </head>
 
 <body>
     <div style="width: 80%; margin: auto">
-        <div id="output"></div>
+        <div class="header">
+            <strong style="flex-grow: 1;">sdfs-monitor</strong>
+            <div style="display: flex">
+                <a href="/">nodes</a>
+                <a href="/jobs.html">jobs</a>
+            </div>
+        </div>
+        <div id="output" style="padding: 0px 20px"></div>
     </div>
 </body>
 

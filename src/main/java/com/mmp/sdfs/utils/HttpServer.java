@@ -65,7 +65,7 @@ public class HttpServer extends Server {
                     } else {
                         OutputStreamWriter osw = new OutputStreamWriter(sock.getOutputStream());
                         gson.toJson(ret, osw);
-                        osw.close();
+                        osw.flush();
                     }
                 } catch (Exception e) {
                     log.error("Error while handling req: {}", api, e);

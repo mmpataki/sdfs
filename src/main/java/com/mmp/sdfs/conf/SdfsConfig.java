@@ -26,6 +26,9 @@ public class SdfsConfig extends Configuration {
     @Argument(keys = {"--blockSize"}, help = "Block size", defValue = "268435456")
     int blockSize;
 
+    @Argument(keys = {"--heartBeatInterval"}, help = "Heart beat interval", defValue = "10000")
+    int heartBeatInterval;
+
     public SdfsConfig(String[] args) throws Exception {
         super(args);
     }

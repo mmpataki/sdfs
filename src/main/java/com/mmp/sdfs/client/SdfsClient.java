@@ -49,12 +49,12 @@ public class SdfsClient {
     public void delete(String path) throws Exception {
         try {
             FileStat fs = get(path);
-            proxyFactory.getNNProxy().delete(path);
+            proxyFactory.getHNProxy().delete(path);
             delete(fs.getPath());
         } catch (FileNotFoundException fnfe) {
             List<FileStat> list = list(path);
             for (FileStat fileStat : list) {
-                proxyFactory.getNNProxy().delete(fileStat.getPath());
+                proxyFactory.getHNProxy().delete(fileStat.getPath());
             }
         }
     }
@@ -64,11 +64,11 @@ public class SdfsClient {
     }
 
     public List<FileStat> list(String path) throws Exception {
-        return proxyFactory.getNNProxy().list(path);
+        return proxyFactory.getHNProxy().list(path);
     }
 
     public List<LocatedBlock> getBlocks(String path) throws Exception {
-        return proxyFactory.getNNProxy().getBlocks(path);
+        return proxyFactory.getHNProxy().getBlocks(path);
     }
 
     public String submit(Job job, JobUpdateCallBack callBack) throws Exception {
@@ -85,7 +85,7 @@ public class SdfsClient {
                 remoteArtifacts.add(new Pair<>(remotePath, artifact.getSecond()));
             }
             job.setArtifacts(remoteArtifacts);
-            String ret = proxyFactory.getNNProxy().submitJob(job);
+            String ret = proxyFactory.getHNProxy().submitJob(job);
             if (taskMonitor == null) {
                 jobs.put(ret, new Pair<>(job, callBack));
                 taskMonitor = new Thread(new TaskMonitor(), "task-monitor");
@@ -96,6 +96,14 @@ public class SdfsClient {
             log.error("Error while starting task", e);
             cleanupTask(job);
             throw e;
+        }
+    }
+
+    void doTry(Runnable f) {
+        try {
+            f.run();
+        } catch (Exception e) {
+            log.error("error updating job & task status: ", e);
         }
     }
 
@@ -113,15 +121,15 @@ public class SdfsClient {
                             JobState oldJob = jobStates.get(js.getJobId());
                             Pair<Job, JobUpdateCallBack> jobAndCallback = jobs.get(js.getJobId());
                             if (oldJob == null || oldJob.getState() != js.getState())
-                                jobAndCallback.getSecond().jobUpdated(js);
+                                doTry(() -> jobAndCallback.getSecond().jobUpdated(js));
                             for (TaskState ts : js.getTaskStates().values()) {
                                 if ((oldJob == null || oldJob.getTaskState(ts.getTaskId()).getExitCode() != ts.getExitCode())) {
-                                    jobAndCallback.getSecond().taskUpdated(ts);
+                                    doTry(() -> jobAndCallback.getSecond().taskUpdated(ts));
                                 }
                             }
                             if (js.hasCompleted()) {
                                 Pair<Job, JobUpdateCallBack> taskAndCall = jobs.get(js.getJobId());
-                                taskAndCall.getSecond().jobUpdated(js);
+                                doTry(() -> taskAndCall.getSecond().jobUpdated(js));
                                 jobs.remove(js.getJobId());
                                 jobStates.remove(js.getJobId());
                                 cleanupTask(taskAndCall.getFirst());
@@ -148,7 +156,7 @@ public class SdfsClient {
     }
 
     public List<JobState> getStatusOf(String... taskIds) throws Exception {
-        return proxyFactory.getNNProxy().getStatusOf(taskIds);
+        return proxyFactory.getHNProxy().getStatusOf(taskIds);
     }
 
     public void upload(String localPath, String remotePath) throws Exception {
@@ -176,6 +184,6 @@ public class SdfsClient {
     }
 
     public FileStat get(String path) throws Exception {
-        return proxyFactory.getNNProxy().get(path);
+        return proxyFactory.getHNProxy().get(path);
     }
 }

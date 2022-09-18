@@ -32,7 +32,7 @@ public class DNClient {
     }
 
     public List<String> deleteBlocks(DnAddress addr, List<String> blocks) throws Exception {
-        return proxyFactory.getDNProxy(addr).delete(blocks);
+        return proxyFactory.getWNProxy(addr).delete(blocks);
     }
 
     @SneakyThrows
@@ -91,6 +91,6 @@ public class DNClient {
     }
 
     public void startTask(DnAddress addr, TaskDef task) throws Exception {
-        proxyFactory.getDNProxy(addr).startTask(task);
+        proxyFactory.getWNProxy(addr).startTask(task);
     }
 }

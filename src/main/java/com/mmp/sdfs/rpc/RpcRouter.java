@@ -34,7 +34,7 @@ public class RpcRouter {
 
     public void handle(Socket sock) throws Exception {
         RpcCall rpcCall = (RpcCall) serde.readFrom(sock.getInputStream());
-        String id = UUID.randomUUID().toString();
+        String id = rpcCall.getTraceId();
         log.trace("RPC({}) ->  {} {}({})", id, sock.getRemoteSocketAddress(), rpcCall.getName(), rpcCall.getArgs());
         Object ret = null;
         Exception e = null;
@@ -47,7 +47,7 @@ public class RpcRouter {
         } finally {
             RpcContext.unsetRpcContext();
         }
-        RpcResponse resp = new RpcResponse(ret, e);
+        RpcResponse resp = new RpcResponse(id, ret, e);
         log.trace("RPC({}) <- {}", id, resp);
         serde.writeTo(sock.getOutputStream(), resp);
     }

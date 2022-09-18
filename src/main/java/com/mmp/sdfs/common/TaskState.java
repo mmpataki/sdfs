@@ -19,15 +19,22 @@ public class TaskState implements Serializable {
     public enum State implements Serializable {
         QUEUED,
         PICKED,
+        ASSIGNED,
         RUNNING,
         FAILED,
         ABORTED,
         SUCCEEDED;
+
+        public boolean isCompleted() {
+            return ordinal() > RUNNING.ordinal();
+        }
+
     }
 
     String taskId;
 
     String taskLabel;
+
     int exitCode;
     String node;
     State state;
@@ -45,7 +52,8 @@ public class TaskState implements Serializable {
     }
 
     void stateChanged(State state) {
-        stateChanges.add(new Pair<>(state, System.currentTimeMillis()));
+        if (stateChanges.isEmpty() || stateChanges.get(stateChanges.size() - 1).getFirst() != state)
+            stateChanges.add(new Pair<>(state, System.currentTimeMillis()));
         this.state = state;
     }
 
@@ -54,12 +62,16 @@ public class TaskState implements Serializable {
     }
 
     public void picked() {
+        stateChanged(State.PICKED);
+    }
+
+    public void running() {
         stateChanged(State.RUNNING);
     }
 
-    public void started(String nodeId) {
+    public void nodeAssigned(String nodeId) {
         this.node = nodeId;
-        setState(State.RUNNING);
+        setState(State.ASSIGNED);
     }
 
     public void completed(Integer s) {
@@ -72,6 +84,6 @@ public class TaskState implements Serializable {
     }
 
     public boolean hasRun() {
-        return getState().ordinal() < State.RUNNING.ordinal();
+        return getState().ordinal() >= State.RUNNING.ordinal();
     }
 }
