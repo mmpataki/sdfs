@@ -23,7 +23,7 @@ public class SdfsConfig extends Configuration {
     @Argument(keys = {"--replFactor"}, help = "Replication factor", defValue = "3")
     int replicationFactor;
 
-    @Argument(keys = {"--blockSize"}, help = "Block size", defValue = "268435456")
+    @Argument(keys = {"--blockSize"}, help = "Block size", defValue = "67108864")
     int blockSize;
 
     @Argument(keys = {"--heartBeatInterval"}, help = "Heart beat interval", defValue = "10000")

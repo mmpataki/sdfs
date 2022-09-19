@@ -10,4 +10,5 @@ public class DnProfile implements Serializable {
     String id, os;
     int cores;
     long memorySize;
+    long diskTotal;
 }

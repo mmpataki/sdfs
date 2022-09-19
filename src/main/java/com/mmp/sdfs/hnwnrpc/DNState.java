@@ -1,6 +1,5 @@
 package com.mmp.sdfs.hnwnrpc;
 
-import com.mmp.sdfs.utils.Pair;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -13,6 +12,6 @@ public class DNState implements Serializable {
     double cpuPercent;
     long memoryAvailable;
     double[] loadAvg;
-    Map<String, Pair<Long, Long>> disks;
+    long diskAvailable;
     Map<String, Integer> taskStates;
 }

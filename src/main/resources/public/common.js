@@ -120,17 +120,8 @@ function getStatusBar(lbl, fill, total, filllbl, totallbl, lblstyle) {
 }
 
 function diskUsage(n) {
-    let x = n => (n / (1024 * 1024 * 1024)).toFixed(1), s = n.state;
-    let disk = Object.entries(s.disks).map(([n, d]) => {
-        let f = d.first - d.second, t = d.first;
-        return getStatusBar(n, f, t, `used (${x(f)}GB)`, `total (${x(t)} GB)`, 'margin-left: 10px')
-    }).join('\n')
-    return `
-        <div style="margin: 5px 0px">
-            <small><strong>Disks</strong></small>
-            ${disk}
-        </div>
-    `
+    let t = n.profile.diskTotal, f = t - n.state.diskAvailable;
+    return getStatusBar(`Disk (${gb(f)}GB / ${gb(t)}GB)`, f, t, `${((f * 100 / t).toFixed(1))}%`, `total (${gb(t)} GB)`, 'font-weight: bold')
 }
 
 function gb(x) { return (x / (1024 * 1024 * 1024)).toFixed(1) }
@@ -162,16 +153,19 @@ function getTaskStats(n) {
 function getSummary(nodes, jobs) {
     let reducer = x => Object.values(nodes).reduce((s, t) => s + x(t), 0)
     let totMem = reducer(n => n.profile.memorySize), usedMem = totMem - reducer(n => n.state.memoryAvailable)
+    let totDisk = reducer(n => n.profile.diskTotal), usedDisk = totDisk - reducer(n => n.state.diskAvailable)
     let totCpu = 100, usedCpu = reducer(n => n.state.cpuPercent), totCores = reducer(n => n.profile.cores)
     let totTasks = reducer(n => (n.taskStat ? n.taskStat.cnt || 0 : 0)), totBlocks = reducer(n => n.state.blocks)
     let activeJobs = Object.values(jobs).filter(j => ['RUNNING', 'QUEUED', 'ACCEPTED'].includes(j.state)).length
+
     return `
         <div style="display: flex; margin: 30px 0px 30px 0px">
             <div style="flex-grow: 1; justify-content: center; display: flex">${getTextBlock(100, Object.keys(nodes).length, 'Node(s)')}</div>
             <div style="flex-grow: 1; justify-content: center; display: flex">${getDonut(100, totMem, usedMem, `Memory (total: ${gb(totMem)}GB)`, getColor(.8), getColor(usedMem / totMem))}</div>
             <div style="flex-grow: 1; justify-content: center; display: flex">${getDonut(100, totCpu, usedCpu, `CPU used (${totCores} cores)`, getColor(usedCpu / totCpu))}</div>
+            <div style="flex-grow: 1; justify-content: center; display: flex">${getDonut(100, totDisk, usedDisk, `Disk used (${gb(totDisk)}GB)`, getColor(usedDisk / totDisk))}</div>
             <div style="flex-grow: 1; justify-content: center; display: flex">${getTextBlock(100, activeJobs, `Active jobs (total: ${totTasks})`)}</div>
-            <div style="flex-grow: 1; justify-content: center; display: flex">${getTextBlock(100, totBlocks, 'Blocks')}</div>
+            <div style="flex-grow: 1; justify-content: center; display: flex">${getTextBlock(100, totBlocks, 'SDFS Blocks')}</div>
         </div>
     `
 }

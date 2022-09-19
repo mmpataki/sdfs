@@ -3,6 +3,7 @@ package com.mmp.sdfs.headnode;
 import com.mmp.sdfs.client.DNClient;
 import com.mmp.sdfs.common.*;
 import com.mmp.sdfs.conf.HeadNodeConfig;
+import com.mmp.sdfs.hnwnrpc.DNState;
 import com.mmp.sdfs.utils.Pair;
 import lombok.Data;
 import lombok.SneakyThrows;
@@ -53,7 +54,12 @@ public class Scheduler implements Runnable {
                 Pair<TaskDef, Job> taskAndJob = pickATask();
                 if (taskAndJob != null) {
                     try {
-                        runThe(taskAndJob);
+                        DnAddress addr = pickANode(taskAndJob.getFirst());
+                        if (addr == null) {
+                            taskQ.add(taskAndJob);
+                            return;
+                        }
+                        runThe(taskAndJob, addr);
                     } catch (Exception e) {
                         log.error("Error submitting a task: {}", taskAndJob);
                     }
@@ -70,11 +76,10 @@ public class Scheduler implements Runnable {
         Thread.sleep(5000);
     }
 
-    private void runThe(Pair<TaskDef, Job> taskAndJob) throws Exception {
+    private void runThe(Pair<TaskDef, Job> taskAndJob, DnAddress addr) throws Exception {
         TaskDef task = taskAndJob.getFirst();
         Job job = taskAndJob.getSecond();
         JobState js = job.getState();
-        DnAddress addr = pickANode(task);
         log.info("Starting: {} ({}) / {} ({}) on {}", js.getJobId(), js.getJobLabel(), task.getTaskId(), task.getTaskLabel(), addr);
         js.taskAssigned(task.getTaskId(), addr.getId());
         try {
@@ -88,8 +93,27 @@ public class Scheduler implements Runnable {
 
     Random R = new Random();
 
-    private DnAddress pickANode(TaskDef first) {
-        return workerNodes.get(first.getPreferredNodes().get(R.nextInt(first.getPreferredNodes().size()))).getAddr();
+    private DnAddress pickANode(TaskDef task) {
+
+        for (String prefNode : task.getPreferredNodes()) {
+            DnRef node = workerNodes.get(prefNode);
+            if (nodeIsOk(node, task)) {
+                return node.getAddr();
+            }
+        }
+
+        List<DnRef> nodes = new ArrayList<>(workerNodes.values());
+        for (DnRef node : nodes) {
+            if (nodeIsOk(node, task))
+                return node.getAddr();
+        }
+
+        return null;
+    }
+
+    private boolean nodeIsOk(DnRef node, TaskDef task) {
+        DNState state = node.getState();
+        return state.getMemoryAvailable() > task.getMemNeeded() && (100 - state.getCpuPercent()) > task.getCpuPercentNeeded();
     }
 
     private boolean thereAreResources() {

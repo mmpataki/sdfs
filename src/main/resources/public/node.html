@@ -34,35 +34,88 @@
             `
         }
 
+        function setupPopup(back) {
+            back.children[0].remove()
+            let ele = back.children[0]
+            let par = back.parentElement;
+
+            par.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                let e = getOffset(par);
+                back.style.display = 'block'
+                ele.style.left = `${e.left - ele.offsetWidth + par.offsetWidth}px`;
+                ele.style.top = `${e.top + 10}px`;
+            })
+            back.addEventListener('click', function (e) {
+                e.stopPropagation();
+                back.style.display = 'none'
+            })
+
+            document.body.appendChild(back)
+        }
+
+        function getOffset(el) {
+            const rect = el.getBoundingClientRect();
+            return {
+                left: rect.left + window.scrollX,
+                top: rect.top + window.scrollY
+            };
+        }
+
+        function makePopup(html) {
+            return `
+                <div style='width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; display: none'>
+                    <img src onerror="setupPopup(this.parentElement)">
+                    <div style="display: flex; flex-direction: column; background: white; border: solid 1px gray; padding: 20px; position: absolute">
+                        ${html}
+                    </div>
+                </div>
+            `
+        }
+
         function getGantt(arr, colmap) {
             let out = [], tot = arr[arr.length - 1].start - arr[0].start
             for (let i = 0; i < arr.length - 1; i++) {
-                let tim = (arr[i + 1].start - arr[i].start)
-                out.push({ tag: arr[i].lbl, lbl: `${arr[i].lbl} (${(tim / 1000).toFixed(2)}s)`, percent: (tim * 100) / tot })
+                let tim = (arr[i + 1].start - arr[i].start), tf = (tim / 1000).toFixed(2)
+                out.push({ tag: arr[i].lbl, lbl: arr[i].lbl, tim: tf, start: arr[i].base, percent: (tim * 100) / tot })
             }
             console.log(out)
             return `
-                <div class="status-bar-box" style="display: flex">
-                    ${out.map(o => {
+                <div>
+                    <div class="status-bar-box" style="display: flex">
+                        ${out.map(o => {
                 return `
-                            <div style="width: ${o.percent}%; background: ${colmap[o.tag]};" class="status-bar-filled" title="${o.lbl}"></div>
-                        `
+                                <div style="width: ${o.percent}%; background: ${colmap[o.tag]};" class="status-bar-filled" title="${o.lbl}"></div>
+                            `
             }).join('\n')}
+                    </div>
+                    ${makePopup(
+                arr.map(o => {
+                    return `
+                                <div style="display: flex; margin: 5px 0px">
+                                    <div style="width: 50px; height: 6px; background: ${colmap[o.lbl]}; margin-right: 20px" class="status-bar-filled"></div>
+                                    <small>${o.lbl} (start: ${new Date(o.base).toISOString()})</small>
+                                </div>
+                            `
+                }).join('\n')
+            )} 
                 </div>
             `
         }
 
         function getStateChange(states) {
-            states = states.map(s => ({ lbl: s.first, start: s.second - states[0].second }))
+            states = states.map(s => ({ lbl: s.first, base: s.second, start: s.second - states[0].second }))
             if (states[states.length - 1].lbl.endsWith("ING")) {
-                states.push({ lbl: 'DUMMY', start: +(new Date()) })
+                let now = +(new Date())
+                states.push({ lbl: 'Now', base: now, start: now - states[states.length - 2].start })
             }
             return getGantt(states, {
                 ACCEPTED: 'skyblue',
                 QUEUED: 'blue',
                 RUNNING: 'orange',
                 FAILED: 'red',
-                SUCCEEDED: 'green'
+                SUCCEEDED: 'green',
+                PICKED: 'yellow',
             })
         }
 
@@ -111,7 +164,7 @@
         function getJobs(jobs) {
             return `
                 <div style='margin: 40px 0px 0px 0px'>
-                    <h3>Jobs: ${Object.keys(jobs).length}</h3>
+                    <h3>Jobs on this node: ${Object.keys(jobs).length}</h3>
                     <table style="width: 100%; text-align: left">
                         <tr style='background: #e0e0e0'>
                             <th>Job Id</th>
@@ -119,14 +172,14 @@
                             <th>State</th>
                             <th>Accepted</th>
                             <th>Last update</th>
-                            <th>Timeline</th>
+                            <th>Timeline <small>Click</small></th>
                         </tr>
                         ${Object.values(jobs).sort((b, a) => a.stateChanges[0].second - b.stateChanges[0].second).map(job => getJob(job)).join('\n')}
                     </table>
                 </div>
             `
         }
-        
+
         function load(m) {
             Promise.all([get(`/api/nodes?id=${m.id}`).then(resp => resp.json), get(`/api/jobs?nodeid=${m.id}`).then(resp => resp.json)])
                 .then(([node, jobs]) => {
@@ -140,7 +193,7 @@
                     Object.values(jobs).forEach(job => {
                         let tasks = job.taskStates
                         Object.values(tasks).forEach(task => {
-                            if(!task.node) return
+                            if (!task.node) return
                             if (!nodes[task.node]['taskStat']) {
                                 nodes[task.node]['taskStat'] = { cnt: 0, states: {} }
                             }
@@ -170,7 +223,7 @@
             const params = new URLSearchParams(window.location.search), m = {};
             params.forEach((v, k) => m[k] = v)
             load(m)
-            setInterval(() => load(m), 5000);
+            //setInterval(() => load(m), 5000);
         }
     </script>
 </head>
@@ -178,7 +231,7 @@
 <body>
     <div style="width: 80%; margin: auto">
         <div class="header">
-            <strong style="flex-grow: 1;">sdfs-monitor</strong>
+            <strong style="flex-grow: 1;"><a href="/">sdfs-monitor</a></strong>
             <div style="display: flex">
                 <a href="/">nodes</a>
                 <a href="/jobs.html">jobs</a>

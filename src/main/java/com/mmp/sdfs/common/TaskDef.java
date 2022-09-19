@@ -14,6 +14,10 @@ public class TaskDef implements Serializable {
 
     String taskId, taskLabel;
 
+    long memNeeded;
+
+    float cpuPercentNeeded;
+
     List<String> command;
 
     List<String> preferredNodes;

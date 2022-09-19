@@ -11,13 +11,16 @@ import lombok.extern.slf4j.Slf4j;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 import oshi.hardware.HardwareAbstractionLayer;
+import oshi.software.os.OSFileStore;
 import oshi.software.os.OperatingSystem;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 
 @Slf4j
@@ -29,6 +32,7 @@ public class HeartBeater {
 
     File blockDir;
     String myId;
+    String sdfsMount;
 
     long[] prevTicks;
 
@@ -44,6 +48,7 @@ public class HeartBeater {
         blockDir = new File(conf.getBlockDir());
         this.myId = id;
         this.taskStates = taskStates;
+        this.sdfsMount = mountOf(blockDir.getAbsolutePath());
 
         SystemInfo si = new SystemInfo();
         hal = si.getHardware();
@@ -59,6 +64,12 @@ public class HeartBeater {
         profile.setOs(si.getOperatingSystem().getFamily() + " " + si.getOperatingSystem().getVersionInfo());
         profile.setMemorySize(hal.getMemory().getTotal());
         profile.setId(id);
+        Optional<OSFileStore> mount = os.getFileSystem().getFileStores().stream().filter(fs -> fs.getMount().equals(sdfsMount)).findFirst();
+        if (mount.isPresent()) {
+            profile.setDiskTotal(mount.get().getTotalSpace());
+        } else {
+            log.error("Mount {} not found", sdfsMount);
+        }
 
         register();
 
@@ -107,10 +118,27 @@ public class HeartBeater {
         state.setCpuPercent(processor.getSystemCpuLoadBetweenTicks(prevTicks) * 100);
         prevTicks = processor.getSystemCpuLoadTicks();
         state.setLoadAvg(processor.getSystemLoadAverage(3));
-        Map<String, Pair<Long, Long>> dMap = new HashMap<>();
-        os.getFileSystem().getFileStores().forEach(fs -> dMap.put(fs.getMount(), new Pair<>(fs.getTotalSpace(), fs.getFreeSpace())));
-        state.setDisks(dMap);
+        Optional<OSFileStore> mount = os.getFileSystem().getFileStores().stream().filter(fs -> fs.getMount().equals(sdfsMount)).findFirst();
+        if (mount.isPresent()) {
+            state.setDiskAvailable(mount.get().getFreeSpace());
+        } else {
+            log.error("Mount {} not found", sdfsMount);
+        }
         return state;
     }
 
+    public static String mountOf(String path) throws IOException {
+        Path p = Paths.get(path);
+        FileStore fs = Files.getFileStore(p);
+        Path temp = p.toAbsolutePath();
+        Path mountp = temp;
+        while ((temp = temp.getParent()) != null && fs.equals(Files.getFileStore(temp))) {
+            mountp = temp;
+        }
+        return mountp.toAbsolutePath().toString();
+    }
+
+    public static void main(String[] args) throws IOException {
+        System.out.println(mountOf("./src"));
+    }
 }

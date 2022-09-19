@@ -25,8 +25,10 @@ public abstract class NameStore {
 
     protected List<DnAddress> getDnLocations(int replicas) {
         List<DnRef> nodes = new ArrayList<>(dataNodes.values());
-        nodes.sort(Comparator.comparingLong(dn -> dn.getState().getBlocks()));
-        return nodes.subList(Math.max(0, nodes.size() - replicas), nodes.size()).stream().map(DnRef::getAddr).collect(Collectors.toList());
+        nodes.sort(Comparator.comparingDouble(dn ->
+                dn.getState().getBlocks() * (1 - ((double) dn.getState().getDiskAvailable() / dn.getProfile().getDiskTotal()))
+        ));
+        return nodes.subList(0, Math.min(nodes.size(), replicas)).stream().map(DnRef::getAddr).collect(Collectors.toList());
     }
 
     public abstract FileStat create(String path, String owner, int replicationFactor) throws Exception;
