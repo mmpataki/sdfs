@@ -59,13 +59,17 @@ public class HttpServer extends Server {
             } else {
                 try {
                     Object ret = handlers.get(api).handle(params);
-                    sendHeader(sock.getOutputStream(), 200);
-                    if (InputStream.class.isAssignableFrom(ret.getClass())) {
-                        copyData((InputStream) ret, sock.getOutputStream());
+                    if (ret == null) {
+                        sendHeader(sock.getOutputStream(), 404);
                     } else {
-                        OutputStreamWriter osw = new OutputStreamWriter(sock.getOutputStream());
-                        gson.toJson(ret, osw);
-                        osw.flush();
+                        sendHeader(sock.getOutputStream(), 200);
+                        if (InputStream.class.isAssignableFrom(ret.getClass())) {
+                            copyData((InputStream) ret, sock.getOutputStream());
+                        } else {
+                            OutputStreamWriter osw = new OutputStreamWriter(sock.getOutputStream());
+                            gson.toJson(ret, osw);
+                            osw.flush();
+                        }
                     }
                 } catch (Exception e) {
                     log.error("Error while handling req: {}", api, e);

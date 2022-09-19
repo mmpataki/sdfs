@@ -14,7 +14,7 @@ public class JobState implements Serializable {
 
 
     public boolean hasRunOnNode(String node) {
-        return getTaskStates().values().stream().anyMatch(t -> t.getNode().equals(node));
+        return getTaskStates().values().stream().anyMatch(t -> t.getNode() != null && t.getNode().equals(node));
     }
 
     public enum State implements Serializable {
