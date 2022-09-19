@@ -1,4 +1,4 @@
-let baseUrl = window.location.port == 5003 ? "http://localhost:8080" : ""
+let baseUrl = ""
 let rejectCodeList = [400, 401, 500, 403];
 
 function _ajax(method, url, data, hdrs, cancelToken) {
@@ -154,7 +154,7 @@ function getSummary(nodes, jobs) {
     let reducer = x => Object.values(nodes).reduce((s, t) => s + x(t), 0)
     let totMem = reducer(n => n.profile.memorySize), usedMem = totMem - reducer(n => n.state.memoryAvailable)
     let totDisk = reducer(n => n.profile.diskTotal), usedDisk = totDisk - reducer(n => n.state.diskAvailable)
-    let totCpu = 100, usedCpu = reducer(n => n.state.cpuPercent), totCores = reducer(n => n.profile.cores)
+    let totCpu = 100, usedCpu = reducer(n => n.state.cpuPercent) / Object.values(nodes).length, totCores = reducer(n => n.profile.cores)
     let totJobs = Object.values(jobs).length, totBlocks = reducer(n => n.state.blocks)
     let activeJobs = Object.values(jobs).filter(j => ['RUNNING', 'QUEUED', 'ACCEPTED'].includes(j.state)).length
 

@@ -223,7 +223,7 @@
             const params = new URLSearchParams(window.location.search), m = {};
             params.forEach((v, k) => m[k] = v)
             load(m)
-            //setInterval(() => load(m), 5000);
+            setInterval(() => load(m), 5000);
         }
     </script>
 </head>
@@ -233,8 +233,8 @@
         <div class="header">
             <strong style="flex-grow: 1;"><a href="/">sdfs-monitor</a></strong>
             <div style="display: flex">
-                <a href="/">nodes</a>
-                <a href="/jobs.html">jobs</a>
+                <a href="/">Nodes</a>
+                <a href="/jobs.html">Jobs</a>
             </div>
         </div>
         <div id="output" style="padding: 0px 20px"></div>
