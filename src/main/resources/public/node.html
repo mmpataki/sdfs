@@ -181,9 +181,9 @@
         }
 
         function load(m) {
-            Promise.all([get(`/api/nodes?id=${m.id}`).then(resp => resp.json), get(`/api/jobs?nodeid=${m.id}`).then(resp => resp.json)])
-                .then(([node, jobs]) => {
-                    let nodes = {}
+            Promise.all([get(`/api/nodes?id=${m.id}`).then(resp => resp.json), get(`/api/jobs?nodeid=${m.id}&from=${from}&size=${size}`).then(resp => resp.json)])
+                .then(([node, jobResp]) => {
+                    let nodes = {}, jobs = jobResp.jobs
                     nodes[node.addr.id] = node
 
                     Object.values(jobs).forEach(j => {
@@ -202,21 +202,18 @@
                         })
                     })
 
-                    console.log(nodes)
-                    let reducer = x => Object.values(nodes).reduce((s, t) => s + x(t), 0)
-                    let totMem = reducer(n => n.profile.memorySize), usedMem = totMem - reducer(n => n.state.memoryAvailable)
-                    let totCpu = 100, usedCpu = reducer(n => n.state.cpuPercent), totCores = reducer(n => n.profile.cores)
-                    let totTasks = reducer(n => (n.taskStat ? n.taskStat.cnt || 0 : 0)), totBlocks = reducer(n => n.state.blocks)
-
-                    g('output').innerHTML = Object.values(nodes).map(node => {
-                        return `
+                    g('output').innerHTML =
+                        `${Object.values(nodes).map(node => {
+                            return `
                             ${getHostName(node)}
-                            ${getSummary(nodes, jobs)}
+                            ${getSummary(nodes, jobResp)}
                             <div style="font-size: .8em">
                             ${getJobs(jobs)}
                             </div>
                         `
-                    }).join('\n')
+                        }).join('\n')}
+                        ${getPages(jobResp.allJobs)}
+                    `
                 })
         }
         window.onload = function () {

@@ -155,8 +155,8 @@ function getSummary(nodes, jobs) {
     let totMem = reducer(n => n.profile.memorySize), usedMem = totMem - reducer(n => n.state.memoryAvailable)
     let totDisk = reducer(n => n.profile.diskTotal), usedDisk = totDisk - reducer(n => n.state.diskAvailable)
     let totCpu = 100, usedCpu = reducer(n => n.state.cpuPercent) / Object.values(nodes).length, totCores = reducer(n => n.profile.cores)
-    let totJobs = Object.values(jobs).length, totBlocks = reducer(n => n.state.blocks)
-    let activeJobs = Object.values(jobs).filter(j => ['RUNNING', 'QUEUED', 'ACCEPTED'].includes(j.state)).length
+    let totJobs = jobs.numJobs, totBlocks = reducer(n => n.state.blocks)
+    let activeJobs = jobs.activeJobs
 
     return `
         <div style="display: flex; margin: 30px 0px 30px 0px">
@@ -168,4 +168,13 @@ function getSummary(nodes, jobs) {
             <div style="flex-grow: 1; justify-content: center; display: flex">${getTextBlock(100, totBlocks, 'SDFS Blocks')}</div>
         </div>
     `
+}
+
+let from = 0, size = 20
+function getPages(numJobs) {
+    let html = `<div style='width: 80%; margin: auto; margin-top: 20px'>`
+    for (i = 0; i < numJobs; i += size) {
+        html += `<span class='page-item ${i == from ? 'page-item-active' : ''}' onclick='load(from = ${i})'>${i / size}</span>`
+    }
+    return html + '</div>'
 }

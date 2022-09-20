@@ -60,3 +60,18 @@ small {
 th, td {
     padding: 2px 5px;
 }
+
+
+.page-item {
+    padding: 1px 3px;
+    border: solid 1px lightgray;
+    background: lightgray;
+    margin: 2px;
+    float: left;
+    display: block;
+    cursor: pointer;
+}
+
+.page-item-active {
+    background-color: yellow;
+}

@@ -177,8 +177,8 @@
         }
 
         function load(m) {
-            Promise.all([get(`/api/nodes`).then(resp => resp.json), get(`/api/jobs`).then(resp => resp.json)])
-                .then(([nodes, jobs]) => {
+            Promise.all([get(`/api/nodes`).then(resp => resp.json), get(`/api/jobs?from=${from}&size=${size}`).then(resp => resp.json)])
+                .then(([nodes, { jobs, numJobs, activeJobs }]) => {
 
                     Object.values(jobs).forEach(j => {
                         Object.values(j.taskStates).forEach(t => t.nodeDef = nodes[t.node])
@@ -201,12 +201,13 @@
                         <div style="font-size: .8em">
                             ${getJobs(jobs)}
                         </div>
+                        ${getPages(numJobs)}
                     `
                 })
         }
         window.onload = function () {
             load({})
-            setInterval(() => load(m), 5000);
+            //setInterval(() => load(m), 5000);
         }
     </script>
 </head>

@@ -20,9 +20,9 @@
 
         function load() {
             Promise.all([get('/api/nodes').then(resp => resp.json), get('/api/jobs').then(resp => resp.json)])
-                .then(([nodes, jobs]) => {
+                .then(([nodes, jobResp]) => {
 
-                    Object.values(jobs).forEach(job => {
+                    Object.values(jobResp.jobs).forEach(job => {
                         let tasks = job.taskStates
                         Object.values(tasks).forEach(task => {
                             if(!task.node) return
@@ -35,7 +35,7 @@
                     })
 
                     g('output').innerHTML = `
-                        ${getSummary(nodes, jobs)}
+                        ${getSummary(nodes, jobResp)}
                         <div style="padding: 0px 20px; margin-top: 40px">
                             <h4 style="background: #e8e8e8; padding: 2px 5px">Nodes</h4>
                             ${

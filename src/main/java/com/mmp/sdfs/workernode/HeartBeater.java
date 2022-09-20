@@ -30,7 +30,6 @@ public class HeartBeater {
     private final ProxyFactory proxyFactory;
     private final Map<String, Integer> taskStates;
 
-    File blockDir;
     String myId;
     String sdfsMount;
 
@@ -45,10 +44,9 @@ public class HeartBeater {
     public HeartBeater(WorkerNodeConfig conf, String id, Map<String, Integer> taskStates) throws Exception {
         this.conf = conf;
         this.proxyFactory = new ProxyFactory(conf);
-        blockDir = new File(conf.getBlockDir());
         this.myId = id;
         this.taskStates = taskStates;
-        this.sdfsMount = mountOf(blockDir.getAbsolutePath());
+        this.sdfsMount = mountOf(new File(conf.getBlockDir()).getAbsolutePath());
 
         SystemInfo si = new SystemInfo();
         hal = si.getHardware();
@@ -113,7 +111,7 @@ public class HeartBeater {
     }
 
     private DNState getHeartBeatPayload() {
-        state.setBlocks(blockDir.list().length);
+        state.setBlocks(new File(conf.getBlockDir()).list().length);
         state.setMemoryAvailable(hal.getMemory().getAvailable());
         state.setCpuPercent(processor.getSystemCpuLoadBetweenTicks(prevTicks) * 100);
         prevTicks = processor.getSystemCpuLoadTicks();

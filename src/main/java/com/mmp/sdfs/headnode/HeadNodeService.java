@@ -118,13 +118,17 @@ public class HeadNodeService implements HeadNode {
         if (params.containsKey("id"))
             return jobs.get(params.get("id"));
         int offset = params.containsKey("from") ? Integer.parseInt(params.get("from")) : 0;
-        int size = params.containsKey("from") ? Integer.parseInt(params.get("size")) : 20;
+        int size = params.containsKey("size") ? Integer.parseInt(params.get("size")) : 20;
         LinkedHashMap<String, JobState> allJobs = getAllJobs(jobs, params);
         String[] keys = allJobs.keySet().toArray(new String[0]);
-        Map<String, JobState> ret = new LinkedHashMap<>();
+        Map<String, Object> ret = new HashMap<>();
+        Map<String, JobState> retJobs = new LinkedHashMap<>();
         for (int i = offset; i < Math.min(offset + size, keys.length); i++) {
-            ret.put(keys[i], allJobs.get(keys[i]));
+            retJobs.put(keys[i], allJobs.get(keys[i]));
         }
+        ret.put("activeJobs", allJobs.values().stream().filter(j -> !j.getState().isCompleted()).count());
+        ret.put("numJobs", allJobs.size());
+        ret.put("jobs", retJobs);
         return ret;
     }
 
