@@ -11,10 +11,10 @@ import java.io.Serializable;
 public class DnRef implements Serializable {
     DnAddress addr;
     DnProfile profile;
-    DNState state;
+    volatile DNState state;
 
-    long lastHeartbeat;
-    boolean active;
+    volatile long lastHeartbeat;
+    volatile boolean active;
 
     public DnRef(DnProfile profile, String hostname) {
         this.addr = new DnAddress(profile.getId(), hostname, profile.getPort(), profile.getDataPort(), profile.getInfoPort());
