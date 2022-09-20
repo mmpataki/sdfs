@@ -20,9 +20,23 @@ public class SqliteNameStore extends NameStore {
         super(conf, dataNodes);
         conn = DriverManager.getConnection(String.format("jdbc:sqlite:%s/store.db", conf.getNamedir()), "", "");
         conn.setAutoCommit(true);
-        conn.createStatement().execute("create table if not exists files (path string, owner string, replicas integer, size integer)");
-        conn.createStatement().execute("create table if not exists blocks (block_id string, pathid integer)");
-        conn.createStatement().execute("create table if not exists block_locations (block_id string, dn_id string, deleted integer)");
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            log.info("Closing sqlite conn in shutdown hook");
+            try {
+                conn.close();
+            } catch (SQLException e) {
+                log.error("Error while closing connection in shutdown hook");
+            }
+        }));
+        exec("create table if not exists files (path string, owner string, replicas integer, size integer)");
+        exec("create table if not exists blocks (block_id string, pathid integer)");
+        exec("create table if not exists block_locations (block_id string, dn_id string, deleted integer)");
+    }
+
+    private void exec(String s) throws SQLException {
+        try (Statement statement = conn.createStatement()) {
+            statement.execute(s);
+        }
     }
 
     private FileStat getPathId(String path) throws Exception {
