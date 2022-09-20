@@ -108,6 +108,10 @@ public class HttpServer extends Server {
     }
 
     private void sendHeader(OutputStream os, int code) throws IOException {
-        os.write(String.format("HTTP/1.1 %d OK\n\n", code).getBytes());
+        String header = "" +
+                "HTTP/1.1 %d OK\n" +
+                "Access-Control-Allow-Origin : *\n" +
+                "\n";
+        os.write(String.format(header, code).getBytes());
     }
 }
