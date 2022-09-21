@@ -58,6 +58,7 @@ public class HeadNodeService implements HeadNode {
         DnRef dnRef = dns.get(dnState.getId());
         dnRef.setState(dnState);
         dnRef.lastHeartbeat = System.currentTimeMillis();
+        dnRef.active = true;
 
         dnState.getTaskStates().forEach((t, s) -> {
             scheduler.taskUpdated(t, s);

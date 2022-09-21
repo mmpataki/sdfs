@@ -284,7 +284,7 @@ function getGantt(arr, colmap) {
 }
 
 function getStateChange(states) {
-    if (!states.length) return 's'
+    if (!states.length) return ''
     states = states.map(s => ({ lbl: s.first, base: s.second, start: s.second - states[0].second }))
     if (states[states.length - 1].lbl.endsWith("ING")) {
         let now = +(new Date())

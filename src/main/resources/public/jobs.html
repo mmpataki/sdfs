@@ -30,7 +30,7 @@
                     })
 
                     g('output').innerHTML = `
-                    <h3>Jobs on this node (${activeJobs} active / ${numJobs})</h3>
+                    <h3>All Jobs(${activeJobs} active / ${numJobs})</h3>
                         ${getJobFilters(m, `./jobs.html`)}
                         <div style="font-size: .8em">
                             ${getJobs(jobs)}
@@ -44,7 +44,7 @@
             const params = new URLSearchParams(window.location.search), m = {};
             params.forEach((v, k) => m[k] = v)
             load(m)
-            //setInterval(() => load(m), 5000);
+            setInterval(() => load(m), 5000);
         }
     </script>
 </head>

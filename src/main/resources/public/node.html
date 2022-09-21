@@ -54,7 +54,7 @@
             const params = new URLSearchParams(window.location.search), m = {};
             params.forEach((v, k) => m[k] = v)
             load(m)
-            //setInterval(() => load(m), 5000);
+            setInterval(() => load(m), 5000);
         }
     </script>
 </head>

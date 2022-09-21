@@ -1,9 +1,9 @@
 package com.mmp.sdfs.headnode;
 
 import com.mmp.sdfs.common.DnAddress;
+import com.mmp.sdfs.hnwnrpc.DNState;
 import com.mmp.sdfs.hnwnrpc.DnProfile;
 import lombok.Data;
-import com.mmp.sdfs.hnwnrpc.DNState;
 
 import java.io.Serializable;
 
@@ -14,10 +14,10 @@ public class DnRef implements Serializable {
     volatile DNState state;
 
     volatile long lastHeartbeat;
-    volatile boolean active;
+    volatile boolean active = true;
 
     public DnRef(DnProfile profile, String hostname) {
         this.addr = new DnAddress(profile.getId(), hostname, profile.getPort(), profile.getDataPort(), profile.getInfoPort());
-        this.profile =profile;
+        this.profile = profile;
     }
 }

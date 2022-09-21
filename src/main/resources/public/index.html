@@ -25,7 +25,7 @@
                     Object.values(jobResp.jobs).forEach(job => {
                         let tasks = job.taskStates
                         Object.values(tasks).forEach(task => {
-                            if(!task.node) return
+                            if (!task.node) return
                             if (!nodes[task.node]['taskStat']) {
                                 nodes[task.node]['taskStat'] = { cnt: 0, states: {} }
                             }
@@ -34,25 +34,30 @@
                         })
                     })
 
+                    const makeIpNumber = (ip) => Number(
+                        ip.split('.')
+                            .map((subString) => (`00${subString}`).slice(-3))
+                            .join('')
+                    );
+
                     g('output').innerHTML = `
                         ${getSummary(nodes, jobResp)}
                         <div style="padding: 0px 20px; margin-top: 40px">
                             <h4 style="background: #e8e8e8; padding: 2px 5px">Nodes</h4>
-                            ${
-                                Object.values(nodes).map(node => {
-                                    if(!node.state)
-                                        node.state = {}
-                                    return `
-                                        <div class='node' style='background: ${node.active ? '#fff' : '#fff6f6'}'>
-                                            ${getHostName(node)}
-                                            ${getTaskStats(node)}
-                                            ${memUsage(node)}
-                                            ${getCpuUsage(node)}
-                                            ${diskUsage(node)}
-                                        </div>
-                                    `
-                                }).join('\n')
-                            }
+                            ${Object.values(nodes).sort((a, b) => makeIpNumber(a.addr.hostname) - makeIpNumber(b.addr.hostname)).map(node => {
+                        if (!node.state)
+                            node.state = {}
+                        return `
+                            <div class='node' style='background: ${node.active ? '#fff' : '#fff6f6'}'>
+                                ${getHostName(node)}
+                                ${getTaskStats(node)}
+                                ${memUsage(node)}
+                                ${getCpuUsage(node)}
+                                ${diskUsage(node)}
+                            </div>
+                        `
+                    }).join('\n')
+                        }
                         </div>
                     `
                 })
