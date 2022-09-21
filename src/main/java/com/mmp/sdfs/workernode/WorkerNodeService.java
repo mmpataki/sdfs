@@ -75,7 +75,7 @@ public class WorkerNodeService extends Server implements WorkerNode {
                 Files.delete(Paths.get(getBlockFile(block)));
                 passed.add(block);
             } catch (NoSuchFileException nfe) {
-                log.error("block {} was already deleted", nfe);
+                log.error("block {} was already deleted", block, nfe);
                 passed.add(block);
             } catch (Exception e) {
                 log.error("Error while deleting block {}", block, e);

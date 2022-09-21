@@ -88,13 +88,12 @@ public class HeartBeater {
             public void run() {
                 while (true) {
                     try {
+                        Map<String, Integer> copyTaskStates = new HashMap<>(HeartBeater.this.taskStates);
                         proxyFactory.getHNProxy().heartBeat(getHeartBeatPayload());
-                        List<String> remove = new ArrayList<>();
-                        taskStates.forEach((k, v) -> {
+                        copyTaskStates.forEach((k, v) -> {
                             if (v != -9999)
-                                remove.add(k);
+                                taskStates.remove(k);
                         });
-                        remove.forEach(taskStates::remove);
                     } catch (UnknownDnException ukdn) {
                         try {
                             register();

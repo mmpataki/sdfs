@@ -24,6 +24,7 @@ public class BlockDeleter {
             while (true) {
                 try {
                     List<Pair<String, String>> deletedBlocks = store.getDeletedBlocks();
+                    log.trace("Deleting blocks : {}", deletedBlocks);
                     Map<String, List<String>> grouped = new HashMap<>();
                     for (Pair<String, String> db : deletedBlocks)
                         grouped.computeIfAbsent(db.getSecond(), k -> new ArrayList<>()).add(db.getFirst());

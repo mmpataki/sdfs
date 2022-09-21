@@ -138,12 +138,13 @@ public class HeadNodeService implements HeadNode {
     private LinkedHashMap<String, JobState> getAllJobs(LinkedHashMap<String, JobState> jobs, Map<String, String> params) {
         String node = params.get("nodeid"), stateStr = params.get("states");
         String search = params.containsKey("q") ? params.get("q").toLowerCase() : null;
-        Set<String> states = stateStr != null && !  stateStr.isEmpty() ? new HashSet<>(Arrays.asList(params.get("states").split(","))) : Collections.emptySet();
+        Set<String> states = stateStr != null && !stateStr.isEmpty() ? new HashSet<>(Arrays.asList(params.get("states").split(","))) : Collections.emptySet();
         LinkedHashMap<String, JobState> ret = new LinkedHashMap<>();
         Stream<JobState> jobsFilter = jobs.values().stream();
         if (!states.isEmpty()) jobsFilter = jobsFilter.filter(j -> states.contains(j.getState().toString()));
         if (node != null) jobsFilter = jobsFilter.filter(j -> j.hasRunOnNode(params.get("nodeid")));
-        if (search != null) jobsFilter = jobsFilter.filter(j -> j.getJobLabel().toLowerCase().contains(search));
+        if (search != null)
+            jobsFilter = jobsFilter.filter(j -> j.getJobLabel().toLowerCase().contains(search) || j.getJobId().contains(search));
         jobsFilter.forEach(j -> ret.put(j.getJobId(), node != null ? new JobState(j, node) : j));
         return ret;
     }
