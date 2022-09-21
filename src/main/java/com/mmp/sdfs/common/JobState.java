@@ -61,7 +61,7 @@ public class JobState implements Serializable {
         jobLabel = js.jobLabel;
         stateChanges = js.stateChanges;
         taskStates = new HashMap<>();
-        js.taskStates.values().stream().filter(ts -> ts.getNode().equals(node)).forEach(ts -> taskStates.put(ts.getTaskId(), ts));
+        js.taskStates.values().stream().filter(ts -> node == null || ts.getNode().equals(node)).forEach(ts -> taskStates.put(ts.getTaskId(), ts));
     }
 
     public void taskUpdated(String taskId, Integer s) {

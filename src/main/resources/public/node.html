@@ -12,176 +12,8 @@
             return `<h2>${n.addr.hostname}<small style='margin-left: 10px'><strong>(${n.addr.id}, ${n.profile.os})</strong></small></h2>`
         }
 
-        function getTask(t) {
-            return `
-                <tr style="margin: 5px">
-                    <th style="padding-left: 20px">
-                        ${t.taskLabel}
-                        <small><a style="margin-left: 10px" target="_blank" href="http://${t.nodeDef.addr.hostname}:${t.nodeDef.addr.infoPort}/api/task/logs?taskid=${t.taskId}">logs</a></small>
-                    </th>
-                    <td></td>
-                    <td>${getStateLbl(t.state)}</td>
-                    <td>
-                        ${new Date(t.stateChanges[0].second).toISOString()}
-                    </td>
-                    <td>
-                        ${new Date(t.stateChanges[t.stateChanges.length - 1].second).toISOString()}
-                    </td>
-                    <td style="min-width: 100px">
-                        ${getStateChange(t.stateChanges)}
-                    </td>
-                </tr>
-            `
-        }
-
-        function setupPopup(back) {
-            back.children[0].remove()
-            let ele = back.children[0]
-            let par = back.parentElement;
-
-            par.addEventListener('click', function (ev) {
-                ev.stopPropagation();
-                let e = getOffset(par);
-                back.style.display = 'block'
-                ele.style.left = `${e.left - ele.offsetWidth + par.offsetWidth}px`;
-                ele.style.top = `${e.top + 10}px`;
-            })
-            back.addEventListener('click', function (e) {
-                e.stopPropagation();
-                back.style.display = 'none'
-            })
-
-            document.body.appendChild(back)
-        }
-
-        function getOffset(el) {
-            const rect = el.getBoundingClientRect();
-            return {
-                left: rect.left + window.scrollX,
-                top: rect.top + window.scrollY
-            };
-        }
-
-        function makePopup(html) {
-            return `
-                <div style='width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; display: none'>
-                    <img src onerror="setupPopup(this.parentElement)">
-                    <div style="display: flex; flex-direction: column; background: white; border: solid 1px gray; padding: 20px; position: absolute">
-                        ${html}
-                    </div>
-                </div>
-            `
-        }
-
-        function getGantt(arr, colmap) {
-            let out = [], tot = arr[arr.length - 1].start - arr[0].start
-            for (let i = 0; i < arr.length - 1; i++) {
-                let tim = (arr[i + 1].start - arr[i].start), tf = (tim / 1000).toFixed(2)
-                out.push({ tag: arr[i].lbl, lbl: arr[i].lbl, tim: tf, start: arr[i].base, percent: (tim * 100) / tot })
-            }
-            console.log(out)
-            return `
-                <div>
-                    <div class="status-bar-box" style="display: flex">
-                        ${out.map(o => {
-                return `
-                                <div style="width: ${o.percent}%; background: ${colmap[o.tag]};" class="status-bar-filled" title="${o.lbl}"></div>
-                            `
-            }).join('\n')}
-                    </div>
-                    ${makePopup(
-                arr.map(o => {
-                    return `
-                                <div style="display: flex; margin: 5px 0px">
-                                    <div style="width: 50px; height: 6px; background: ${colmap[o.lbl]}; margin-right: 20px" class="status-bar-filled"></div>
-                                    <small>${o.lbl} (start: ${new Date(o.base).toISOString()})</small>
-                                </div>
-                            `
-                }).join('\n')
-            )} 
-                </div>
-            `
-        }
-
-        function getStateChange(states) {
-            states = states.map(s => ({ lbl: s.first, base: s.second, start: s.second - states[0].second }))
-            if (states[states.length - 1].lbl.endsWith("ING")) {
-                let now = +(new Date())
-                states.push({ lbl: 'Now', base: now, start: now - states[states.length - 2].start })
-            }
-            return getGantt(states, {
-                ACCEPTED: 'skyblue',
-                QUEUED: 'blue',
-                RUNNING: 'orange',
-                FAILED: 'red',
-                SUCCEEDED: 'green',
-                PICKED: 'yellow',
-            })
-        }
-
-        function getStateLbl(state) {
-            let cols = {
-                succeeded: ['#E8F5E9', '#1B5E20'],
-                failed: ['#FFEBEE', '#B71C1C'],
-                running: ['#FFF3E0', '#E65100'],
-                aborted: ['#FCE4EC', '#880E4F'],
-                queued: ['#E3F2FD', '#0D47A1'],
-                assigned: ['hotred', 'hotpink']
-            }
-            state = state.toLowerCase()
-            console.log(state)
-            return `
-                <span style="background: ${cols[state][0]}; color: ${cols[state][1]}; padding: 1px 3px; border-radius: 3px">
-                    ${state}
-                </span>
-            `
-        }
-
-        function getJob(job) {
-            return `
-                <tr>
-                    <th>
-                        ${job.jobId}
-                    </th>
-                    <td>${job.jobLabel}</td>
-                    <td>${getStateLbl(job.state)}</td>
-                    <td>
-                        ${new Date(job.stateChanges[0].second).toISOString()}
-                    </td>
-                    <td>
-                        ${new Date(job.stateChanges[job.stateChanges.length - 1].second).toISOString()}
-                    </td>
-                    <td style="min-width: 100px">
-                        ${getStateChange(job.stateChanges)}
-                    </td>
-                </tr>
-                <tr><td style="padding-left: 10px"><small><strong>Tasks</strong></small></td></tr>
-                ${Object.values(job.taskStates).map(t => getTask(t)).join('\n')}
-                <tr><td style="padding: 10px"></td></tr>
-            `
-        }
-
-        function getJobs(jobs) {
-            return `
-                <div style='margin: 40px 0px 0px 0px'>
-                    <h3>Jobs on this node: ${Object.keys(jobs).length}</h3>
-                    <table style="width: 100%; text-align: left">
-                        <tr style='background: #e0e0e0'>
-                            <th>Job Id</th>
-                            <th>Label</th>
-                            <th>State</th>
-                            <th>Accepted</th>
-                            <th>Last update</th>
-                            <th>Timeline <small>Click</small></th>
-                        </tr>
-                        ${Object.values(jobs).sort((b, a) => a.stateChanges[0].second - b.stateChanges[0].second).map(job => getJob(job)).join('\n')}
-                    </table>
-                </div>
-            `
-        }
-
         function load(m) {
-            Promise.all([get(`/api/nodes?id=${m.id}`).then(resp => resp.json), get(`/api/jobs?nodeid=${m.id}&from=${from}&size=${size}`).then(resp => resp.json)])
+            Promise.all([get(`/api/nodes?id=${m.id}`).then(resp => resp.json), get(`/api/jobs?nodeid=${m.id}&from=${from}&size=${size}&states=${m.states || ''}&q=${m.q || ''}`).then(resp => resp.json)])
                 .then(([node, jobResp]) => {
                     let nodes = {}, jobs = jobResp.jobs
                     nodes[node.addr.id] = node
@@ -207,6 +39,8 @@
                             return `
                             ${getHostName(node)}
                             ${getSummary(nodes, jobResp)}
+                            <h3>Jobs on this node (${jobResp.activeJobs} active / ${jobResp.numJobs})</h3>
+                            ${getJobFilters(m, `./node.html?id=${m.id}`)}
                             <div style="font-size: .8em">
                             ${getJobs(jobs)}
                             </div>
@@ -220,7 +54,7 @@
             const params = new URLSearchParams(window.location.search), m = {};
             params.forEach((v, k) => m[k] = v)
             load(m)
-            setInterval(() => load(m), 5000);
+            //setInterval(() => load(m), 5000);
         }
     </script>
 </head>
@@ -230,8 +64,8 @@
         <div class="header">
             <strong style="flex-grow: 1;"><a href="/">sdfs-monitor</a></strong>
             <div style="display: flex">
-                <a href="/">Nodes</a>
-                <a href="/jobs.html">Jobs</a>
+                <a href="./">Nodes</a>
+                <a href="./jobs.html">Jobs</a>
             </div>
         </div>
         <div id="output" style="padding: 0px 20px"></div>

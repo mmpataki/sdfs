@@ -40,6 +40,8 @@
                             <h4 style="background: #e8e8e8; padding: 2px 5px">Nodes</h4>
                             ${
                                 Object.values(nodes).map(node => {
+                                    if(!node.state)
+                                        node.state = {}
                                     return `
                                         <div class='node' style='background: ${node.active ? '#fff' : '#fff6f6'}'>
                                             ${getHostName(node)}
@@ -67,8 +69,8 @@
         <div class="header">
             <strong style="flex-grow: 1;"><a href="/">sdfs-monitor</a></strong>
             <div style="display: flex">
-                <a href="/">Nodes</a>
-                <a href="/jobs.html">Jobs</a>
+                <a href="./">Nodes</a>
+                <a href="jobs.html">Jobs</a>
             </div>
         </div>
         <div id="output"></div>

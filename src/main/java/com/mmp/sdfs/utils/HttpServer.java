@@ -46,7 +46,8 @@ public class HttpServer extends Server {
         String resource = new BufferedReader(new InputStreamReader(sock.getInputStream())).readLine().split(" ")[1];
         Map<String, String> params = new HashMap<>();
         if (resource.contains("?")) {
-            Arrays.stream(resource.split("\\?")[1].split("&")).forEach(kvp -> {
+            String q = resource.substring(resource.indexOf("?") + 1);
+            Arrays.stream(q.split("&")).forEach(kvp -> {
                 if (kvp.contains("="))
                     params.put(kvp.substring(0, kvp.indexOf('=')), kvp.substring(kvp.indexOf('=') + 1));
             });

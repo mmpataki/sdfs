@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 public class HeadNodeService implements HeadNode {
@@ -119,6 +120,7 @@ public class HeadNodeService implements HeadNode {
             return jobs.get(params.get("id"));
         int offset = params.containsKey("from") ? Integer.parseInt(params.get("from")) : 0;
         int size = params.containsKey("size") ? Integer.parseInt(params.get("size")) : 20;
+
         LinkedHashMap<String, JobState> allJobs = getAllJobs(jobs, params);
         String[] keys = allJobs.keySet().toArray(new String[0]);
         Map<String, Object> ret = new HashMap<>();
@@ -133,15 +135,16 @@ public class HeadNodeService implements HeadNode {
     }
 
     private LinkedHashMap<String, JobState> getAllJobs(LinkedHashMap<String, JobState> jobs, Map<String, String> params) {
-        if (params.containsKey("nodeid")) {
-            String node = params.get("nodeid");
-            LinkedHashMap<String, JobState> ret = new LinkedHashMap<>();
-            jobs.values().stream()
-                    .filter(j -> j.hasRunOnNode(node))
-                    .forEach(j -> ret.put(j.getJobId(), new JobState(j, node)));
-            return ret;
-        }
-        return jobs;
+        String node = params.get("nodeid"), stateStr = params.get("states");
+        String search = params.containsKey("q") ? params.get("q").toLowerCase() : null;
+        Set<String> states = stateStr != null && !  stateStr.isEmpty() ? new HashSet<>(Arrays.asList(params.get("states").split(","))) : Collections.emptySet();
+        LinkedHashMap<String, JobState> ret = new LinkedHashMap<>();
+        Stream<JobState> jobsFilter = jobs.values().stream();
+        if (!states.isEmpty()) jobsFilter = jobsFilter.filter(j -> states.contains(j.getState().toString()));
+        if (node != null) jobsFilter = jobsFilter.filter(j -> j.hasRunOnNode(params.get("nodeid")));
+        if (search != null) jobsFilter = jobsFilter.filter(j -> j.getJobLabel().toLowerCase().contains(search));
+        jobsFilter.forEach(j -> ret.put(j.getJobId(), node != null ? new JobState(j, node) : j));
+        return ret;
     }
 
     private class DnMonitor implements Runnable {
