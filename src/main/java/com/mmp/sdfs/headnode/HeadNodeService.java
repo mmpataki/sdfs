@@ -57,7 +57,7 @@ public class HeadNodeService implements HeadNode {
             throw new UnknownDnException();
         DnRef dnRef = dns.get(dnState.getId());
         dnRef.setState(dnState);
-        dnRef.setLastHeartbeat(System.currentTimeMillis());
+        dnRef.lastHeartbeat = System.currentTimeMillis();
 
         dnState.getTaskStates().forEach((t, s) -> {
             scheduler.taskUpdated(t, s);
@@ -159,11 +159,11 @@ public class HeadNodeService implements HeadNode {
             while (true) {
                 try {
                     dns.values().forEach(dn -> {
-                        if (dn.getLastHeartbeat() + conf.getHeartBeatInterval() + (5 * 1000) < System.currentTimeMillis()) {
+                        if (dn.getLastHeartbeat() + conf.getHeartBeatInterval() + (60 * 1000) < System.currentTimeMillis()) {
                             log.info("{} is inactive", dn.getAddr());
-                            dn.setActive(false);
+                            dn.active = false;
                         } else {
-                            dn.setActive(true);
+                            dn.active = true;
                         }
                     });
                 } catch (Exception e) {

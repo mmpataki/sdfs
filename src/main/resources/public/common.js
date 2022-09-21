@@ -1,4 +1,4 @@
-let baseUrl = "";//"http://inedctst01:5002"
+let baseUrl = "http://inedctst01:5002"
 let rejectCodeList = [400, 401, 500, 403];
 
 function _ajax(method, url, data, hdrs, cancelToken) {
