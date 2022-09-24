@@ -33,6 +33,8 @@ public class BlockDeleter {
                             if (dns.containsKey(dnid)) {
                                 List<String> deleted = new DNClient(conf).deleteBlocks(dns.get(dnid).getAddr(), blocks);
                                 store.blocksDeleted(deleted.stream().map(d -> new Pair<>(dnid, d)).collect(Collectors.toList()));
+                            } else {
+                                log.warn("Dn {} is not available, available dns = {}", dnid, dns);
                             }
                         } catch (Exception e) {
                             log.error("Error while deleting blocks from " + dnid + " " + blocks, e);

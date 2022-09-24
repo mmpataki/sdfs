@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 public class HeadNodeService implements HeadNode {
 
     private final HeadNodeConfig conf;
-    Map<String, DnRef> dns = new HashMap<>();
+    final Map<String, DnRef> dns = new HashMap<>();
     NameStore store;
     HttpServer httpServer;
     Scheduler scheduler;

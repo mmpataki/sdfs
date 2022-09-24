@@ -50,24 +50,25 @@ public class Scheduler implements Runnable {
     @Override
     public void run() {
         while (true) {
-            if (thereAreResources() && thereAreTasks()) {
+            int loopLimit = taskQ.size();
+            while (thereAreTasks() && loopLimit > 0) {
+                loopLimit--;
                 Pair<TaskDef, Job> taskAndJob = pickATask();
                 if (taskAndJob != null) {
-                    try {
-                        DnAddress addr = pickANode(taskAndJob.getFirst());
-                        if (addr == null) {
-                            taskQ.add(taskAndJob);
-                            return;
+                    DnAddress addr = pickANode(taskAndJob.getFirst());
+                    if (addr == null) {
+                        taskQ.add(taskAndJob);
+                    } else {
+                        try {
+                            taskAndJob.getFirst().getState().picked();
+                            runThe(taskAndJob, addr);
+                        } catch (Exception e) {
+                            log.error("Error submitting a task: {}", taskAndJob, e);
                         }
-                        runThe(taskAndJob, addr);
-                    } catch (Exception e) {
-                        log.error("Error submitting a task: {}", taskAndJob);
                     }
                 }
-
-            } else {
-                waitForAWhile();
             }
+            waitForAWhile();
         }
     }
 
@@ -116,10 +117,6 @@ public class Scheduler implements Runnable {
         return state.getMemoryAvailable() > task.getMemNeeded() && (100 - state.getCpuPercent()) > task.getCpuPercentNeeded();
     }
 
-    private boolean thereAreResources() {
-        return true;
-    }
-
     private synchronized boolean thereAreTasks() {
         while (!taskQ.isEmpty() && taskQ.peek().getFirst().getState().getState() == TaskState.State.ABORTED)
             taskQ.remove();
@@ -129,9 +126,7 @@ public class Scheduler implements Runnable {
 
     private synchronized Pair<TaskDef, Job> pickATask() {
         if (!taskQ.isEmpty()) {
-            Pair<TaskDef, Job> next = taskQ.remove();
-            next.getFirst().getState().picked();
-            return next;
+            return taskQ.remove();
         }
         return null;
     }
