@@ -21,6 +21,7 @@ public class Scheduler implements Runnable {
     LinkedHashMap<String, Job> jobs = new LinkedHashMap<>();
     LinkedHashMap<String, JobState> jobStates = new LinkedHashMap<>();
     Queue<Pair<TaskDef, Job>> taskQ = new LinkedList<>();
+    private Thread thread;
 
 
     public Scheduler(Map<String, DnRef> workerNodes, HeadNodeConfig conf) {
@@ -44,7 +45,8 @@ public class Scheduler implements Runnable {
     }
 
     public void start() {
-        new Thread(this, "Scheduler").start();
+        this.thread = new Thread(this, "Scheduler");
+        thread.start();
     }
 
     @Override
@@ -74,7 +76,11 @@ public class Scheduler implements Runnable {
 
     @SneakyThrows
     private void waitForAWhile() {
-        Thread.sleep(5000);
+        try {
+            Thread.sleep(5000);
+        } catch (Exception e) {
+            log.info("I was interrupted for work, will schedule a job");
+        }
     }
 
     private void runThe(Pair<TaskDef, Job> taskAndJob, DnAddress addr) throws Exception {
@@ -135,5 +141,7 @@ public class Scheduler implements Runnable {
         String jobId = taskId.split("/")[0];
         if (jobStates.containsKey(jobId))
             jobStates.get(jobId).taskUpdated(taskId, status);
+        if (status != -9999)
+            thread.interrupt();
     }
 }
