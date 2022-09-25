@@ -47,6 +47,8 @@ public class SdfsOutputStream extends OutputStream {
 
     @Override
     public void flush() throws IOException {
+        if(currentBlock == null)
+            return;
         DNClient dnc = new DNClient(conf);
         dnc.writeBlock(currentBlock, buffer, offset);
     }

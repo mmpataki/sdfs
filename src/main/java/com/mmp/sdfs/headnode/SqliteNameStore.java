@@ -76,7 +76,7 @@ public class SqliteNameStore extends NameStore {
                 dlps.setString(1, block.getId());
                 dlps.addBatch();
             }
-            dlps.execute();
+            dlps.executeBatch();
         }
         try (PreparedStatement dbps = conn.prepareStatement("delete from blocks where pathid = ?")) {
             dbps.setLong(1, stat.getId());
@@ -108,7 +108,7 @@ public class SqliteNameStore extends NameStore {
                 dnps.setString(2, newLocation.getId());
                 dnps.addBatch();
             }
-            dnps.execute();
+            dnps.executeBatch();
         }
         return new LocatedBlock(bId, newLocations);
     }
@@ -172,7 +172,7 @@ public class SqliteNameStore extends NameStore {
                 dps.setString(2, dp.getFirst());
                 dps.addBatch();
             }
-            dps.execute();
+            dps.executeBatch();
         }
     }
 
