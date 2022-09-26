@@ -22,6 +22,7 @@ public class Scheduler implements Runnable {
     LinkedHashMap<String, JobState> jobStates = new LinkedHashMap<>();
     Queue<Pair<TaskDef, Job>> taskQ = new LinkedList<>();
     private Thread thread;
+    private final Object lock = 1;
 
 
     public Scheduler(Map<String, DnRef> workerNodes, HeadNodeConfig conf) {
@@ -77,9 +78,12 @@ public class Scheduler implements Runnable {
     @SneakyThrows
     private void waitForAWhile() {
         try {
-            Thread.sleep(5000);
+            synchronized (lock) {
+                lock.wait(5000);
+            }
         } catch (Exception e) {
-            log.info("I was interrupted for work, will schedule a job");
+            if (thread.isInterrupted())
+                log.info("I was interrupted for work, will schedule a job");
         }
     }
 
@@ -141,7 +145,10 @@ public class Scheduler implements Runnable {
         String jobId = taskId.split("/")[0];
         if (jobStates.containsKey(jobId))
             jobStates.get(jobId).taskUpdated(taskId, status);
-        if (status != -9999)
-            thread.interrupt();
+        if (status != -9999) {
+            synchronized (lock) {
+                lock.notifyAll();
+            }
+        }
     }
 }
