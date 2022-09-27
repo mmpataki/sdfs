@@ -124,7 +124,7 @@ public class Scheduler implements Runnable {
 
     private boolean nodeIsOk(DnRef node, TaskDef task) {
         DNState state = node.getState();
-        return state.getMemoryAvailable() > task.getMemNeeded() && (100 - state.getCpuPercent()) > task.getCpuPercentNeeded();
+        return node.isActive() && state.getMemoryAvailable() > task.getMemNeeded() && (100 - state.getCpuPercent()) > task.getCpuPercentNeeded();
     }
 
     private synchronized boolean thereAreTasks() {
