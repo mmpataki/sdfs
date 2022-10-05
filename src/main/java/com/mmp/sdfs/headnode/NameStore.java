@@ -28,9 +28,7 @@ public abstract class NameStore {
         return nodes.stream()
                 .filter(DnRef::isActive)
                 .sorted(Comparator.comparingDouble(dn -> dn.getState().getBlocks()))
-                .collect(Collectors.toList())
-                .subList(0, Math.min(nodes.size(), replicas))
-                .stream()
+                .limit(Math.min(nodes.size(), replicas))
                 .map(DnRef::getAddr)
                 .collect(Collectors.toList());
     }

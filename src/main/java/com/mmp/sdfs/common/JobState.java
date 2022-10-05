@@ -28,6 +28,10 @@ public class JobState implements Serializable {
         public boolean isCompleted() {
             return ordinal() > RUNNING.ordinal();
         }
+
+        public boolean hasRun() {
+            return ordinal() >= RUNNING.ordinal();
+        }
     }
 
     State state;
