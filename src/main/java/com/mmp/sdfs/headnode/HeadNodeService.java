@@ -114,6 +114,13 @@ public class HeadNodeService implements HeadNode {
         return dns;
     }
 
+    @HttpServer.Api("/files")
+    Object browse(Map<String, String> params) throws Exception {
+        if (params.containsKey("dir"))
+            return store.browse(params.get("dir"));
+        return Collections.emptyList();
+    }
+
     @HttpServer.Api("/jobs")
     Object getJobsStates(Map<String, String> params) {
         LinkedHashMap<String, JobState> jobs = scheduler.getJobStates();

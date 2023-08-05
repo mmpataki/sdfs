@@ -189,4 +189,21 @@ public class SqliteNameStore extends NameStore {
     public FileStat get(String path) throws Exception {
         return getPathId(path);
     }
+
+    @Override
+    public List<String> browse(String path) throws Exception {
+        if (!path.endsWith("/"))
+            path += "/";
+        String q = "SELECT DISTINCT '%s' || substr(substr(path, length('%s') + 1), 0, case when instr(substr(path, length('%s') + 1), '/') then instr(substr(path, length('%s') + 1), '/') else length(substr(path, length('%s') + 1)) + 1 end) FROM files WHERE path LIKE '%s%%'";
+        q = String.format(q, path, path, path, path, path, path);
+
+        List<String> fstats = new LinkedList<>();
+        try (PreparedStatement ps = conn.prepareStatement(q)) {
+            ps.execute();
+            ResultSet rs = ps.getResultSet();
+            while (rs.next())
+                fstats.add(rs.getString(1));
+        }
+        return fstats;
+    }
 }

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Node</title>
+    <script src="./common.js"></script>
+    <link href="./styles.css" rel="stylesheet">
+    <script>
+        function g(i) { return document.getElementById(i) }
+
+        function load(m) {
+
+            m.path = m.path || ''
+            get(`/api/files?dir=${m.path || ''}`).then(resp => {
+
+                let x = (x) => (x || '-')
+                let p = (x) => x.substr(x.lastIndexOf('/') + 1)
+
+                files = resp.json
+                files = files.map(f => `
+                    <tr>
+                        <td><a href="?path=${f.path || f}">${p(f.path || f)}</a></td>
+                        <td>${x(f.owner)}</td>
+                        <td>${x(f.created)}</td>
+                        <td>${x(f.replicas)}</td>
+                        <td>${x(f.size)}</td>
+                    </tr>
+                `).join('\n')
+
+                g('output').innerHTML = `
+                    <h3>Files</h3>
+                    <b style="margin: 0px 5px">Path: ${m.path}</b>
+                    <table style="width: 100%">
+                        <tr style="text-align: left">
+                            <th>Name</th>
+                            <th>Owner</th>
+                            <th>Created</th>
+                            <th>Replicas</th>
+                            <th>Size</th>
+                        </tr>
+                        ${files}
+                    </table>
+                `
+            })
+        }
+
+        window.onload = function () {
+            const params = new URLSearchParams(window.location.search), m = {};
+            params.forEach((v, k) => m[k] = v)
+            load(m)
+        }
+    </script>
+</head>
+
+<body>
+    <div style="width: 80%; margin: auto">
+        <div class="header">
+            <strong style="flex-grow: 1;"><a href="/">sdfs-monitor</a></strong>
+            <div style="display: flex">
+                <a href="./">Nodes</a>
+                <a href="./files.html">Files</a>
+                <a href="./jobs.html">Jobs</a>
+            </div>
+        </div>
+        <div id="output" style="padding: 0px 5px"></div>
+    </div>
+</body>
+
+</html>

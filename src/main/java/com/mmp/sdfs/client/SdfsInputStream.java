@@ -22,6 +22,7 @@ public class SdfsInputStream extends InputStream {
     LocatedBlock currentBlock;
 
     byte[] buffer;
+    long readBytes = 0;
     int len, offset, curBlock = 0;
 
     public SdfsInputStream(String path, SdfsClient client) {
@@ -52,6 +53,7 @@ public class SdfsInputStream extends InputStream {
         }
         if (ret == -1)
             ret = 0xff;
+        readBytes++;
         return ret;
     }
 
@@ -61,4 +63,14 @@ public class SdfsInputStream extends InputStream {
         currentBlock = null;
     }
 
+    @Override
+    public long skip(long n) throws IOException {
+        seek(readBytes + n);
+        return n;
+    }
+
+    @Override
+    public synchronized void reset() throws IOException {
+        super.reset();
+    }
 }

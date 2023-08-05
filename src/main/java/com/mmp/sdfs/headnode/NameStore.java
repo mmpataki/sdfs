@@ -50,4 +50,7 @@ public abstract class NameStore {
     public abstract void close(String path, long size) throws SQLException;
 
     public abstract FileStat get(String path) throws Exception;
+
+    public abstract List<String> browse(String path) throws Exception;
+
 }
