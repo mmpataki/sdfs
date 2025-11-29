@@ -81,6 +81,7 @@
                                     <mainClass>com.mmp.sdfs.Main</mainClass>
                                 </transformer>
                             </transformers>
+                            <finalName>sdfs-app</finalName>
                         </configuration>
                     </execution>
                 </executions>
