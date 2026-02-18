@@ -155,3 +155,8 @@ All the APIs can be found in
 
 ##### Headnode interface
 /src/main/java/com/mmp/sdfs/hnwnrpc/HeadNode.java
+
+##### Headnode UI
+Headnode hosts a info UI to monitor the health of the nodes, file and jobs in the cluster. Default port is 5002.
+
+<img width="1530" height="778" alt="image" src="https://github.com/user-attachments/assets/d26727d5-66d2-4b54-b727-d4c9c791ba22" />
